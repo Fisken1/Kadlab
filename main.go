@@ -1,4 +1,4 @@
-package main
+package Kadlab
 
 import (
 	d "Kadlab/kademlia"
