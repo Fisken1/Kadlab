@@ -14,9 +14,15 @@ FROM golang:alpine
 
 WORKDIR /app
 
+COPY go.mod .
+RUN go mod download
+
 # Copy the entire project, including the Kademlia code, into the image
-COPY ../kademlia .
+COPY kademlia/*.go ./kademlia/
+COPY main.go .
 
-RUN go build -o my-kademlia-app
+RUN go build -o /kadlab
 
-CMD ["./my-kademlia-app"]
+EXPOSE 8080
+
+CMD ["./kadlab"]
