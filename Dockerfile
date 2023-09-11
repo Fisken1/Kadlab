@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM golang:1.16-alpine
 
 # Add the commands needed to put your compiled go binary in the container and
 # run it when the container starts.
@@ -21,8 +21,8 @@ RUN go mod download
 COPY kademlia/*.go ./kademlia/
 COPY main.go .
 
-RUN go build -o /kadlab
+RUN go build -o main
 
 EXPOSE 8080
 
-CMD ["./kadlab"]
+CMD ["./main"]
