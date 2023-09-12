@@ -1,22 +1,34 @@
 package main
 
 import (
+	"Kadlab/kademlia"
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 )
 
 func main() {
 
-	port := "8081"
+	port := 8080
 	ipAddress := GetOutboundIP()
-	ipString := ipAddress.String() + ":" + port
+	ipString := ipAddress.String() + ":" + strconv.Itoa(port)
 	ipBootstrap := GetBootstrapIP(ipString)
 
-	fmt.Println("your IP is:", ipAddress)
+	fmt.Println("your IP is:", ipString)
 	fmt.Println("bootstrap IP:", ipBootstrap)
 	fmt.Println("port:", port)
+
+	if ipAddress.String() == ipBootstrap {
+		bootstrap := kademlia.InitBootstrap(ipBootstrap, port)
+		go bootstrap.Listen(*bootstrap.Contact)
+	} else {
+		node, _ := kademlia.InitJoin(ipAddress.String(), port)
+		go node.Listen(*node.Contact)
+	}
+
+	select {}
 
 }
 
@@ -38,6 +50,6 @@ func GetOutboundIP() net.IP {
 func GetBootstrapIP(ip string) string {
 	stringList := strings.Split(ip, ".")
 	value := stringList[1]
-	bootstrapIP := "172." + value + ".0.2:10001" // some arbitrary IP address hard coded to be bootstrap
+	bootstrapIP := "172." + value + ".0.2:8081" // some arbitrary IP address hard coded to be bootstrap
 	return bootstrapIP
 }

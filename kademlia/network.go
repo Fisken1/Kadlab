@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 )
 
 type Network struct {
@@ -34,26 +35,23 @@ func CreateKademliaMessage(messageType, senderID, senderAddress, targetNodeID, d
 }
 
 func InitNode(me *Contact) *Network {
-	network := &Network{
+	node := &Network{
 		Contact:  me,
 		Kademlia: InitKademila(*me),
 	}
 	fmt.Print("INITNODE", me.distance, me.ID, me.Address)
-	return network
+	return node
 }
 
-func InitBootstrap(port int) *Network {
-	ip, err := externalIP()
-	if err != nil {
-		fmt.Print(err)
-	}
+func InitBootstrap(ip string, port int) *Network {
 	me := NewContact(NewRandomKademliaID(), ip, port)
 	node := InitNode(&me)
 	return node
 }
 
-func InitJoin(bootstrapIP string, port int) (*Network, error) {
+func InitJoin(ip string, port int) (*Network, error) {
 	// Step 1: Get the local IP address from eth0.
+
 	ip, err := externalIP()
 	if err != nil {
 		return nil, err
@@ -61,14 +59,16 @@ func InitJoin(bootstrapIP string, port int) (*Network, error) {
 	n := NewRandomKademliaID()
 
 	// Step 3: Create a new contact for the bootstrap node.
-	bootstrapContact := NewContact(nil, ip, port)
+	//bootstrapContact := NewContact(nil, bootstrap.Contact.Address, bootstrap.Contact.Port)
 
 	// Step 4: Initialize the Kademlia instance for the new node.
 	node := NewContact(n, ip, port)
 
 	newNodeNetwork := InitNode(&node)
 
-	newNodeNetwork.Kademlia.RoutingTable.AddContact(bootstrapContact)
+	//val := newNodeNetwork.IterativeFindNode(&node)
+
+	//newNodeNetwork.Kademlia.RoutingTable.AddContact()
 
 	return newNodeNetwork, nil
 }
@@ -111,22 +111,21 @@ func externalIP() (string, error) {
 	return "", errors.New("are you connected to the network?")
 }
 
-func Listen(ip string, port int) {
-	addr := net.UDPAddr{
-		Port: port,
-		IP:   net.ParseIP(ip),
-	}
-	listener, err := net.ListenUDP("udp", &addr)
+func (network *Network) Listen(contact Contact) {
+	fmt.Println("Kademlia listener is starting...")
+	addr := contact.Address + ":" + strconv.Itoa(contact.Port)
+	listenAdrs, _ := net.ResolveUDPAddr("udp", addr)
 
+	servr, err := net.ListenUDP("udp", listenAdrs)
 	if err != nil {
-		panic(err)
+		fmt.Println("BIG ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!", err)
+		defer servr.Close()
 	}
-	defer listener.Close()
-
-	buf := make([]byte, 1024)
+	fmt.Println("Listening on: " + listenAdrs.String() + " " + contact.ID.String() + "\n\n")
 
 	for {
-		rlen, _, err := listener.ReadFromUDP(buf)
+		buf := make([]byte, 65536)
+		rlen, _, err := servr.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error reading from UDP:", err)
 			continue

@@ -19,6 +19,14 @@ func NewContact(id *KademliaID, address string, port int) Contact {
 	return Contact{id, address, port, nil}
 }
 
+/*
+ * LookupContact takes a target contact as an argument, traverses
+ * the network and returns the closest contacts to this one.
+ */
+func LookupContact() {
+
+}
+
 // CalcDistance calculates the distance to the target and
 // fills the contacts distance field
 func (contact *Contact) CalcDistance(target *KademliaID) {
