@@ -36,8 +36,11 @@ func InitJoin(port int) (*Kademlia, error) {
 		go bootstrap.net.Listen(bootstrap.RoutingTable.me)
 		return bootstrap, nil
 	} else {
-		node := InitNode(NewContact(NewRandomKademliaID(), ipString, port))
+		node := InitNode(NewContact(NewRandomKademliaID(), ipAddress.String(), port))
+		node.RoutingTable.me.Port = port
+		go Cli(node, make(chan int))
 		go node.net.Listen(node.RoutingTable.me)
+
 		return node, nil
 	}
 }
