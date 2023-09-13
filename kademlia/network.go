@@ -9,68 +9,26 @@ import (
 )
 
 type Network struct {
-	Contact  *Contact
-	Kademlia *Kademlia
+	node Kademlia
 }
 
 // KademliaMessage represents a Kademlia message.
 type KademliaMessage struct {
-	Type          string `json:"Type"`
-	SenderID      string `json:"SenderID"`
-	SenderAddress string `json:"SenderAddress"`
-	NodeID        string `json:"NodeID"`
-	Data          string `json:"Data,omitempty"`
-	Key           string `json:"Key,omitempty"`
+	Type     string   `json:"Type"`
+	Sender   *Contact `json:"SenderID"`
+	Receiver *Contact `json:"NodeID"`
+	Key      string   `json:"Data,omitempty"`
+	Value    string   `json:"Key,omitempty"`
 }
 
-func CreateKademliaMessage(messageType, senderID, senderAddress, targetNodeID, data, key string) KademliaMessage {
+func CreateKademliaMessage(messageType, key, value string, sender, receiver *Contact) KademliaMessage {
 	return KademliaMessage{
-		Type:          messageType,
-		SenderID:      senderID,
-		SenderAddress: senderAddress,
-		NodeID:        targetNodeID,
-		Data:          data,
-		Key:           key,
+		Type:     messageType,
+		Sender:   sender,
+		Receiver: receiver,
+		Key:      key,
+		Value:    value,
 	}
-}
-
-func InitNode(me *Contact) *Network {
-	node := &Network{
-		Contact:  me,
-		Kademlia: InitKademila(*me),
-	}
-	fmt.Print("INITNODE", me.distance, me.ID, me.Address)
-	return node
-}
-
-func InitBootstrap(ip string, port int) *Network {
-	me := NewContact(NewRandomKademliaID(), ip, port)
-	node := InitNode(&me)
-	return node
-}
-
-func InitJoin(ip string, port int) (*Network, error) {
-	// Step 1: Get the local IP address from eth0.
-
-	ip, err := externalIP()
-	if err != nil {
-		return nil, err
-	}
-	n := NewRandomKademliaID()
-
-	// Step 3: Create a new contact for the bootstrap node.
-	//bootstrapContact := NewContact(nil, bootstrap.Contact.Address, bootstrap.Contact.Port)
-
-	// Step 4: Initialize the Kademlia instance for the new node.
-	node := NewContact(n, ip, port)
-
-	newNodeNetwork := InitNode(&node)
-
-	//val := newNodeNetwork.IterativeFindNode(&node)
-
-	//newNodeNetwork.Kademlia.RoutingTable.AddContact()
-
-	return newNodeNetwork, nil
 }
 
 // This function is taken from "https://go.dev/play/p/BDt3qEQ_2H"
@@ -205,12 +163,11 @@ func (network *Network) SendStoreMessage(data []byte) {
 
 // HandlePing handles a "ping" message.
 func HandlePing(msg KademliaMessage) {
-	fmt.Println("Received ping from", msg.SenderID)
-	// Handle the ping message logic here.
+	fmt.Println(msg.Receiver.Address+":"+strconv.Itoa(msg.Receiver.Port)+" Received "+msg.Type+" from", msg.Sender.Address+":"+strconv.Itoa(msg.Receiver.Port))
+	msg.Sender.SendPongMessage(msg.Receiver)
 }
 
 // HandlePong handles a "pong" message.
 func HandlePong(msg KademliaMessage) {
-	fmt.Println("Received pong from", msg.SenderID)
-	// Handle the pong message logic here.
+	fmt.Println(msg.Receiver.Address+":"+strconv.Itoa(msg.Receiver.Port)+" Received "+msg.Type+" from", msg.Sender.Address+":"+strconv.Itoa(msg.Receiver.Port))
 }
