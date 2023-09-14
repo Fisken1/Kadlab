@@ -8,6 +8,7 @@ import (
 )
 
 func Cli(kademlia *Kademlia, exit chan int) {
+	fmt.Println("CLI starting..... ")
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print(">")
@@ -22,6 +23,7 @@ func CliHandler(s []string, kademlia *Kademlia, exit chan int, reader *bufio.Rea
 	}
 	switch operation := s[0]; operation {
 	case "ping":
+		fmt.Println("Ping starting..... ")
 		//contact := kademlia.LookupContactWithIP(s[0])
 		//kademlia.RoutingTable.me.SendPingMessage(contact)
 	default:

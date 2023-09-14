@@ -118,9 +118,10 @@ func Dispatcher(data []byte) {
 	}
 }
 
-func (network *Network) SendPingMessage(contact *Contact) {
+func (sender *Contact) SendPingMessage(receiver *Contact) {
 	// Create a UDP connection to the contact.
-	udpAddr, err := net.ResolveUDPAddr("udp", contact.Address)
+	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		fmt.Println("Error resolving UDP address:", err)
 		return
@@ -133,7 +134,37 @@ func (network *Network) SendPingMessage(contact *Contact) {
 	}
 	defer connection.Close()
 
-	pingMessage := CreateKademliaMessage("PING", contact.ID.String(), contact.Address, "", "", "")
+	pingMessage := CreateKademliaMessage("PING", "", "", receiver, sender)
+
+	msg, err := json.Marshal(pingMessage)
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+		return
+	}
+	_, err = connection.Write(msg)
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+		return
+	}
+}
+
+func (sender *Contact) SendPongMessage(receiver *Contact) {
+	// Create a UDP connection to the contact.
+	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		fmt.Println("Error resolving UDP address:", err)
+		return
+	}
+
+	connection, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		fmt.Println("Error dialing UDP:", err)
+		return
+	}
+	defer connection.Close()
+
+	pingMessage := CreateKademliaMessage("PONG", "", "", receiver, sender)
 
 	msg, err := json.Marshal(pingMessage)
 	if err != nil {
@@ -148,7 +179,7 @@ func (network *Network) SendPingMessage(contact *Contact) {
 }
 
 func (network *Network) SendFindContactMessage(contact *Contact) {
-
+	// TODO
 }
 
 func (network *Network) SendFindDataMessage(hash string) {

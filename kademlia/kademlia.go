@@ -33,7 +33,9 @@ func InitJoin(port int) (*Kademlia, error) {
 
 	if ipAddress.String() == ipBootstrap {
 		bootstrap := InitNode(NewContact(NewRandomKademliaID(), ipBootstrap, port))
+		bootstrap.RoutingTable.me.Port = port
 		go bootstrap.net.Listen(bootstrap.RoutingTable.me)
+		go Cli(bootstrap, make(chan int))
 		return bootstrap, nil
 	} else {
 		node := InitNode(NewContact(NewRandomKademliaID(), ipAddress.String(), port))
@@ -90,3 +92,6 @@ func (kademlia *Kademlia) LookupData(hash string) {
 func (kademlia *Kademlia) Store(data []byte) {
 	// TODO
 }
+
+//func (kademlia *Kademlia) LookupContactWithIP(ip string) Contact {
+//}
