@@ -115,7 +115,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	case "FIND_NODE":
 		json.Unmarshal(data, &msg)
 		fmt.Println(msg.Sender.Address + " Sent the node printing this a FIND_NODE")
-		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, 3)
+		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, 7)
 		msgToSend, err := json.Marshal(closestNodes)
 		return msgToSend, err
 	//case "find_value":
@@ -146,8 +146,8 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 	return nil
 }
 
-func (network *Network) SendFindContactMessage(sender *Contact, receiver *Contact) ([]Contact, error) {
-	pingMessage := CreateKademliaMessage("FIND_NODE", "", "", sender, receiver)
+func (network *Network) SendFindContactMessage(receiver *Contact, target *Contact) ([]Contact, error) {
+	pingMessage := CreateKademliaMessage("FIND_NODE", "", "", receiver, target)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
 	data, err := network.Send(addr, pingMessage)
 	if err != nil {

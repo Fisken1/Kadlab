@@ -32,7 +32,7 @@ func InitJoin(port int) (*Kademlia, error) {
 	ipString := ipAddress.String() + ":" + strconv.Itoa(port)
 	ipBootstrap := GetBootstrapIP(ipString)
 
-	if ipAddress.String() == ipBootstrap {
+	if ipString == ipBootstrap {
 		bootstrap := InitNode(NewContact(NewRandomKademliaID(), ipBootstrap, port))
 		bootstrap.RoutingTable.me.Port = port
 		go bootstrap.net.Listen(bootstrap.RoutingTable.me)
@@ -46,6 +46,9 @@ func InitJoin(port int) (*Kademlia, error) {
 
 		return node, nil
 	}
+
+	// we need to add code that join needs here
+
 }
 
 func GetOutboundIP() net.IP {
@@ -97,7 +100,8 @@ func GetBootstrapIP(ip string) string {
 // LookupContact performs a contact lookup for a given key.
 func (kademlia *Kademlia) LookupContact(target *Contact) []Contact {
 	shortlist := ContactCandidates{kademlia.RoutingTable.FindClosestContacts(target.ID, kademlia.alpha)}
-
+	shortlist.Sort()
+	contactedNodes := make(map[KademliaID]bool)
 	// a list of nodes to know which nodes has been probed already
 	probed := ContactCandidates{}
 
@@ -110,8 +114,85 @@ func (kademlia *Kademlia) LookupContact(target *Contact) []Contact {
 			//kademlia.net.SendFindContactMessage(&shortList.contacts[i])  nånting här?
 
 		}
+		para(i)
+		i++
+
+		//para
 	}
 	return shortlist.contacts
+}
+
+func (kademlia *Kademlia) para(shortlist ContactCandidates, target *Contact, contactedNodes map[KademliaID]bool, indexMultiplier int) {
+
+	closestNode := shortlist.contacts[0] // Initialize closestNode, you need to define its type based on your code.
+
+	k := kademlia.k // Assuming you have a variable k that defines the desired number of active contacts.
+	rpcResults := make(chan []Contact, kademlia.alpha)
+	contacts := ContactCandidates{}
+	for i := kademlia.alpha * indexMultiplier; i < kademlia.alpha*indexMultiplier+kademlia.alpha; i++ {
+		newContacts, err := kademlia.net.SendFindContactMessage(&shortlist.contacts[i], target)
+		contactedNodes[*shortlist.contacts[i].ID] = true
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			rpcResults <- newContacts
+		}
+	}
+
+	//rpc res fix
+
+	// Process RPC results.
+
+	for i := 0; i < len(shortlist.contacts); i++ {
+		receivedContacts := <-rpcResults
+		for _, contact := range receivedContacts {
+
+			if _, alreadyContacted := contactedNodes[*contact.ID]; !alreadyContacted {
+				go func(contact Contact) {
+					contacts, err := kademlia.net.SendFindContactMessage(&contact, target)
+					if err != nil {
+						//shortlist remove
+					} else {
+						rpcResults <- contacts
+					}
+				}(contact)
+				contactedNodes[*contact.ID] = true
+			}
+		}
+		shortlist := ContactCandidates{receivedContacts}
+
+		//look if already contacted
+
+		//shortlist.Sort()
+		// Update closestNode if a closer node is found.
+		// Add the received contacts to the shortlist.
+		// Implement this part based on how you handle results in your system.
+	}
+
+	for {
+		// Check if you have accumulated k active contacts or no closer nodes than closestNode.
+		if shortlist.Len() >= k || closestNode == *target {
+			break
+		}
+
+		// Send FIND_* RPCs to alpha contacts in the shortlist.
+		for _, contact := range shortlist.contacts {
+			if _, alreadyContacted := contactedNodes[*contact.ID]; !alreadyContacted {
+				go func(contact Contact) {
+					contacts, err := kademlia.net.SendFindContactMessage(&contact, target)
+					if err != nil {
+						//shortlist remove
+					} else {
+						rpcResults <- contacts
+					}
+				}(contact)
+				contactedNodes[*contact.ID] = true
+			}
+		}
+	}
+
+	//receivedContacts := <-rpcResults
+
 }
 
 // performNodeLookup performs a FIND_NODE or FIND_VALUE RPC to a contact.
@@ -131,3 +212,121 @@ func (kademlia *Kademlia) Store(data []byte) {
 
 //func (kademlia *Kademlia) LookupContactWithIP(ip string) Contact {
 //}
+
+func (kademlia *Kademlia) LookupNode2(target *Contact) (*Contact, error) {
+	// Initialize variables
+	k := kademlia.k
+	queriedContacts := []Contact{}
+	contactedMap := make(map[string]bool)
+	closestNode := kademlia.getClosestNode(*target.ID, queriedContacts)
+	closestNodeSeen := closestNode
+	iterationsWithoutCloserNode := 0
+
+	for {
+		// Check if you have accumulated k active contacts or found the closest node.
+		if len(queriedContacts) >= k || closestNode.ID == target.ID {
+			break
+		}
+
+		// Send FIND_NODE RPCs to alpha contacts in the shortlist.
+		alphaContacts := kademlia.getAlphaContacts(closestNode, queriedContacts, k, contactedMap)
+		foundContacts, err := kademlia.QueryAlphaContacts(alphaContacts, target)
+
+		if err != nil {
+			// Handle errors if the RPC fails.
+		}
+
+		// Update queriedContacts with the results.
+		queriedContacts = append(queriedContacts, foundContacts...)
+
+		// Find the closest node among the newly queried contacts.
+		newClosestNode := kademlia.getClosestNode(*target.ID, queriedContacts)
+
+		// Check if the closest node has not changed.
+		if newClosestNode.ID == closestNode.ID {
+			// If no closer node is found in this cycle, stop the search.
+			break
+		}
+
+		closestNode = newClosestNode
+	}
+
+	return closestNode, nil
+}
+
+func (kademlia *Kademlia) getAlphaContacts(node *Contact, queriedContacts []Contact, alpha int, contactedMap map[string]bool) []Contact {
+	var alphaContacts []Contact
+
+	// Find the closest contacts to the current node using FindClosestContacts.
+	closestContacts := kademlia.RoutingTable.FindClosestContacts(node.ID, alpha)
+
+	// Iterate through the closest contacts and filter out those that have already been contacted.
+	for _, neighbor := range closestContacts {
+		// Check if the neighbor is not already in queriedContacts.
+		if _, alreadyContacted := contactedMap[neighbor.ID.String()]; !alreadyContacted {
+			alphaContacts = append(alphaContacts, neighbor)
+		}
+
+		// Stop if we have collected enough alpha contacts.
+		if len(alphaContacts) >= alpha {
+			return alphaContacts
+		}
+	}
+
+	return alphaContacts
+}
+
+func (kademlia *Kademlia) getClosestNode(targetID KademliaID, queriedContacts []Contact) *Contact {
+	var closest *Contact
+	var minDistance *KademliaID
+
+	// Iterate through the queriedContacts to find the closest node.
+	for _, contact := range queriedContacts {
+		// Calculate the XOR distance between targetID and the contact's ID using CalcDistance method.
+		contact.CalcDistance(&targetID)
+
+		// If closest is nil or the current contact is closer, update closest and minDistance.
+		if closest == nil || contact.distance.Less(minDistance) {
+			closest = &contact
+			minDistance = contact.distance
+		}
+	}
+
+	return closest
+}
+
+func (kademlia *Kademlia) QueryAlphaContacts(alphaContacts []Contact, target *Contact) ([]Contact, error) {
+	// Create channels to receive results and errors.
+	results := make(chan []Contact, len(alphaContacts))
+	errors := make(chan error, len(alphaContacts))
+
+	// Iterate through alphaContacts and send FIND_NODE RPCs in parallel.
+	for _, contact := range alphaContacts {
+		go func(contact Contact) {
+			// Send a FIND_NODE RPC to the contact.
+			foundContacts, err := kademlia.net.SendFindContactMessage(&contact, target)
+			if err != nil {
+				// Handle the error and send it to the errors channel.
+				errors <- err
+			} else {
+				// Send the found contacts to the results channel.
+				results <- foundContacts
+			}
+		}(contact)
+	}
+
+	// Collect the results from the channels.
+	var foundContacts []Contact
+	for i := 0; i < len(alphaContacts); i++ {
+		select {
+		case contacts := <-results:
+			// Add the found contacts to the result slice.
+			foundContacts = append(foundContacts, contacts...)
+		case err := <-errors:
+			// Handle errors here if needed.
+			fmt.Printf("Error: %v\n", err)
+		}
+	}
+
+	return foundContacts, nil
+}
