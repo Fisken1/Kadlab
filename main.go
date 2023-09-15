@@ -3,6 +3,7 @@ package main
 import "Kadlab/kademlia"
 
 func main() {
-	kademlia.InitJoin(8080)
+	node, _ := kademlia.InitJoin(8080)
+	kademlia.Cli(node, 9090)
 	select {}
 }

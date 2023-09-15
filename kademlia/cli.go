@@ -7,27 +7,53 @@ import (
 	"strings"
 )
 
-func Cli(kademlia *Kademlia, exit chan int) {
-	fmt.Println("CLI starting..... ")
-	reader := bufio.NewReader(os.Stdin)
+func Cli(kademlia *Kademlia, port int) {
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Print(">")
 	for {
-		fmt.Print(">")
-		read, _ := reader.ReadString('\n')
-		fmt.Println(CliHandler(strings.Fields(read), kademlia, exit, reader))
+		scanner.Scan()
+		text := scanner.Text()
+		if len(text) > 0 {
+			input := strings.Fields(text)
+			answer := CliHandler(input, kademlia, port)
+			fmt.Print(answer + "\n> ")
+
+		} else {
+			fmt.Print(Usage() + "\n> ")
+		}
 	}
 }
 
-func CliHandler(s []string, kademlia *Kademlia, exit chan int, reader *bufio.Reader) string {
-	if len(s) == 0 {
-		return ""
-	}
-	switch operation := s[0]; operation {
-	case "ping":
-		fmt.Println("Ping starting..... ")
-		//contact := kademlia.LookupContactWithIP(s[0])
-		//kademlia.RoutingTable.me.SendPingMessage(contact)
+func CliHandler(input []string, node *Kademlia, port int) string {
+	answer := ""
+	switch input[0] {
+
+	case "put":
+		/*
+		 (a) put: Takes a single argument, the contents of the file you are uploading, and outputs the
+		 hash of the object, if it could be uploaded successfully.
+		*/
+
+	case "get":
+		/*
+		 (b) get: Takes a hash as its only argument, and outputs the contents of the object and the
+		 node it was retrieved from, if it could be downloaded successfully.
+		*/
+
+	case "exit", "q":
+		Terminate()
+
 	default:
-		return "Operation: " + operation + " not found"
+		return "Operation: >>" + input[0] + "<< not found." + "\n" + Usage()
 	}
-	return "good"
+	return answer
+}
+
+func Terminate() {
+	fmt.Print("Exiting...")
+	os.Exit(0)
+}
+
+func Usage() string {
+	return "Usage: \n\tput [contents] \n\t\tTakes a single argument, the contents of the file you are uploading, and outputs the\n\t\thash of the object, if it could be uploaded successfully.\n\tget [hash] \n\t\t Takes a hash as its only argument, and outputs the contents of the object and the\n\t\t node it was retrieved from, if it could be downloaded successfully.\n\texit \n\t\t Terminates the node."
 }
