@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
+	"time"
 )
 
 type Network struct {
@@ -90,25 +92,32 @@ func (network *Network) Listen(contact Contact) {
 		}
 
 		// Process the received data by passing it to the Dispatcher function.
-		go Dispatcher(buf[:rlen])
+		go network.Dispatcher(buf[:rlen])
 	}
 }
 
 // Dispatcher is responsible for routing incoming messages to their respective handlers.
-func Dispatcher(data []byte) {
+func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	var msg KademliaMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		fmt.Println("Error decoding message:", err)
-		return
+		return nil, err
 	}
 
 	switch msg.Type {
 	case "PING":
-		HandlePing(msg)
-	case "PONG":
-		HandlePong(msg)
-	//case "find_node":
-	//	HandleFindNode(msg)
+		json.Unmarshal(data, &msg)
+		fmt.Println(msg.Sender.Address + " Sent the node printing this a PING")
+		pong := CreateKademliaMessage("PONG", "", "", msg.Receiver, msg.Sender)
+		msgToSend, err := json.Marshal(pong)
+		return msgToSend, err
+
+	case "FIND_NODE":
+		json.Unmarshal(data, &msg)
+		fmt.Println(msg.Sender.Address + " Sent the node printing this a FIND_NODE")
+		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, 3)
+		msgToSend, err := json.Marshal(closestNodes)
+		return msgToSend, err
 	//case "find_value":
 	//	HandleFindValue(msg)
 	//case "store":
@@ -116,70 +125,42 @@ func Dispatcher(data []byte) {
 	default:
 		fmt.Println("Received unknown message type:", msg.Type)
 	}
+	return nil, nil
 }
 
-func (sender *Contact) SendPingMessage(receiver *Contact) {
-	// Create a UDP connection to the contact.
+func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) error {
+	pingMessage := CreateKademliaMessage("PING", "", "", sender, receiver)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	data, err := network.Send(addr, pingMessage)
 	if err != nil {
-		fmt.Println("Error resolving UDP address:", err)
-		return
+		log.Printf("Ping failed: %v\n", err)
+		return err
+	}
+	var msg KademliaMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		fmt.Println("Error decoding message:", err)
+		return err
 	}
 
-	connection, err := net.DialUDP("udp", nil, udpAddr)
-	if err != nil {
-		fmt.Println("Error dialing UDP:", err)
-		return
-	}
-	defer connection.Close()
-
-	pingMessage := CreateKademliaMessage("PING", "", "", receiver, sender)
-
-	msg, err := json.Marshal(pingMessage)
-	if err != nil {
-		fmt.Println("Error marshaling JSON:", err)
-		return
-	}
-	_, err = connection.Write(msg)
-	if err != nil {
-		fmt.Println("Error sending message:", err)
-		return
-	}
+	fmt.Println(msg.Receiver.Address + "AKW YOUR PING")
+	return nil
 }
 
-func (sender *Contact) SendPongMessage(receiver *Contact) {
-	// Create a UDP connection to the contact.
+func (network *Network) SendFindContactMessage(sender *Contact, receiver *Contact) ([]Contact, error) {
+	pingMessage := CreateKademliaMessage("FIND_NODE", "", "", sender, receiver)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	data, err := network.Send(addr, pingMessage)
 	if err != nil {
-		fmt.Println("Error resolving UDP address:", err)
-		return
+		log.Printf("FIND_NODE FAILED: %v\n", err)
+		return nil, err
+	}
+	var msg []Contact
+	if err := json.Unmarshal(data, &msg); err != nil {
+		fmt.Println("Error decoding message:", err)
+		return nil, err
 	}
 
-	connection, err := net.DialUDP("udp", nil, udpAddr)
-	if err != nil {
-		fmt.Println("Error dialing UDP:", err)
-		return
-	}
-	defer connection.Close()
-
-	pingMessage := CreateKademliaMessage("PONG", "", "", receiver, sender)
-
-	msg, err := json.Marshal(pingMessage)
-	if err != nil {
-		fmt.Println("Error marshaling JSON:", err)
-		return
-	}
-	_, err = connection.Write(msg)
-	if err != nil {
-		fmt.Println("Error sending message:", err)
-		return
-	}
-}
-
-func (network *Network) SendFindContactMessage(contact *Contact) {
-	// TODO
+	return msg, nil
 }
 
 func (network *Network) SendFindDataMessage(hash string) {
@@ -190,15 +171,51 @@ func (network *Network) SendStoreMessage(data []byte) {
 	// TODO
 }
 
-// BELOW WE HANDLE RPCs
+func (network *Network) Send(addr string, msg KademliaMessage) ([]byte, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		fmt.Println("Error resolving UDP address:", err)
+		return nil, err
+	}
 
-// HandlePing handles a "ping" message.
-func HandlePing(msg KademliaMessage) {
-	fmt.Println(msg.Receiver.Address+":"+strconv.Itoa(msg.Receiver.Port)+" Received "+msg.Type+" from", msg.Sender.Address+":"+strconv.Itoa(msg.Receiver.Port))
-	msg.Sender.SendPongMessage(msg.Receiver)
-}
+	connection, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		fmt.Println("Error dialing UDP:", err)
+		return nil, err
+	}
+	defer connection.Close()
 
-// HandlePong handles a "pong" message.
-func HandlePong(msg KademliaMessage) {
-	fmt.Println(msg.Receiver.Address+":"+strconv.Itoa(msg.Receiver.Port)+" Received "+msg.Type+" from", msg.Sender.Address+":"+strconv.Itoa(msg.Receiver.Port))
+	marshaledMsg, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+		return nil, err
+	}
+	_, err = connection.Write(marshaledMsg)
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+		return nil, err
+	}
+
+	responseChannel := make(chan []byte)
+	go func() {
+		// Read from the connection
+		data := make([]byte, 1024)
+		length, _, err := connection.ReadFromUDP(data[:])
+		if err != nil {
+			return
+		}
+		responseChannel <- data[:length]
+
+	}()
+
+	select {
+	case response := <-responseChannel:
+		if _, err := network.Dispatcher(response); err != nil {
+			return nil, err
+		} else {
+			return response, nil
+		}
+	case <-time.After(3 * time.Second):
+		return nil, errors.New("TIME OUT PLS LOOK INTO THIS")
+	}
 }
