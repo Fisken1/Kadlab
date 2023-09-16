@@ -2,10 +2,7 @@ package kademlia
 
 import (
 	"fmt"
-	"log"
-	"net"
 	"strconv"
-	"strings"
 )
 
 type Kademlia struct {
@@ -20,60 +17,33 @@ func InitNode(me Contact) *Kademlia {
 	node := &Kademlia{
 		RoutingTable: NewRoutingTable(me),
 		Hashmap:      make(map[string][]byte),
-		alpha:        10,
+		alpha:        3,
 	}
-	node.net = &Network{*node}
+	node.net = &Network{*node, nil}
 	fmt.Print("INITNODE", me.distance, me.ID, me.Address)
 	return node
 }
 
-func InitJoin(port int) (*Kademlia, error) {
-	ipAddress := GetOutboundIP()
-	ipString := ipAddress.String() + ":" + strconv.Itoa(port)
-	ipBootstrap := GetBootstrapIP(ipString)
+func InitJoin(ip string, ipBootstrap string, port int) (*Kademlia, error) {
+	ipString := ip + ":" + strconv.Itoa(port)
 
 	if ipString == ipBootstrap {
 		bootstrap := InitNode(NewContact(NewRandomKademliaID(), ipBootstrap, port))
 		bootstrap.RoutingTable.me.Port = port
 		go bootstrap.net.Listen(bootstrap.RoutingTable.me)
-		go Cli(bootstrap, make(chan int))
+		//go Cli(bootstrap, make(chan int))
 		return bootstrap, nil
 	} else {
-		node := InitNode(NewContact(NewRandomKademliaID(), ipAddress.String(), port))
+		node := InitNode(NewContact(NewRandomKademliaID(), ip, port))
 		node.RoutingTable.me.Port = port
-		go Cli(node, make(chan int))
-		go node.net.Listen(node.RoutingTable.me)
+		//go Cli(node, make(chan int))
+		node.net.Listen(node.RoutingTable.me)
 
 		return node, nil
 	}
 
 	// we need to add code that join needs here
 
-}
-
-func GetOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func(conn net.Conn) {
-		err := conn.Close()
-		if err != nil {
-
-		}
-	}(conn)
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-
-	return localAddr.IP
-}
-
-// GetBootstrapIP Check if a node is bootstrap or not, this is hardcoded.
-func GetBootstrapIP(ip string) string {
-	stringList := strings.Split(ip, ".")
-	value := stringList[1]
-	bootstrapIP := "172." + value + ".0.2:8081" // some arbitrary IP address hard coded to be bootstrap
-	return bootstrapIP
 }
 
 /*
@@ -96,7 +66,7 @@ func GetBootstrapIP(ip string) string {
  *
  * At the end of this process, the node will have accumulated a set of k active contacts or (if the RPC was FIND_VALUE) may have found a data value. Either a set of triples or the value is returned to the caller.
  */
-
+/*
 // LookupContact performs a contact lookup for a given key.
 func (kademlia *Kademlia) LookupContact(target *Contact) []Contact {
 	shortlist := ContactCandidates{kademlia.RoutingTable.FindClosestContacts(target.ID, kademlia.alpha)}
@@ -194,6 +164,7 @@ func (kademlia *Kademlia) para(shortlist ContactCandidates, target *Contact, con
 	//receivedContacts := <-rpcResults
 
 }
+*/
 
 // performNodeLookup performs a FIND_NODE or FIND_VALUE RPC to a contact.
 func (kademlia *Kademlia) performNodeLookup(contact *Contact, target *Contact) []Contact {
@@ -219,8 +190,6 @@ func (kademlia *Kademlia) LookupNode2(target *Contact) (*Contact, error) {
 	queriedContacts := []Contact{}
 	contactedMap := make(map[string]bool)
 	closestNode := kademlia.getClosestNode(*target.ID, queriedContacts)
-	closestNodeSeen := closestNode
-	iterationsWithoutCloserNode := 0
 
 	for {
 		// Check if you have accumulated k active contacts or found the closest node.
@@ -287,8 +256,17 @@ func (kademlia *Kademlia) getClosestNode(targetID KademliaID, queriedContacts []
 
 		// If closest is nil or the current contact is closer, update closest and minDistance.
 		if closest == nil || contact.distance.Less(minDistance) {
-			closest = &contact
-			minDistance = contact.distance
+			if closest != nil {
+				fmt.Println("Switched closest contact from : " + closest.ID.String() + " to " + contact.ID.String() + " with a distance of " + contact.distance.String())
+			} else {
+				fmt.Println("FIRST ENTRY :" + contact.ID.String())
+			}
+
+			// Create a separate variable to store the current contact.
+			currentContact := contact
+			closest = &currentContact
+			minDistance = currentContact.distance
+			fmt.Println("NOW THE MINDISTANCE IS: " + minDistance.String())
 		}
 	}
 

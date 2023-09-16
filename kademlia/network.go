@@ -11,7 +11,8 @@ import (
 )
 
 type Network struct {
-	node Kademlia
+	node   Kademlia
+	server *net.UDPConn
 }
 
 // KademliaMessage represents a Kademlia message.
@@ -72,13 +73,14 @@ func externalIP() (string, error) {
 }
 
 func (network *Network) Listen(contact Contact) {
-	fmt.Println("Kademlia listener is starting...")
-	addr := contact.Address + ":" + strconv.Itoa(contact.Port)
-	listenAdrs, _ := net.ResolveUDPAddr("udp", addr)
 
+	addr := contact.Address + ":" + strconv.Itoa(contact.Port)
+	fmt.Println(" Kademlia listener is starting on: " + addr)
+	listenAdrs, _ := net.ResolveUDPAddr("udp", addr)
 	servr, err := net.ListenUDP("udp", listenAdrs)
+	network.server = servr
 	if err != nil {
-		fmt.Println("BIG ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!", err)
+		fmt.Println("BIG ERROR! This is the addr it tried to listen to: "+listenAdrs.String(), err)
 		defer servr.Close()
 	}
 	fmt.Println("Listening on: " + listenAdrs.String() + " " + contact.ID.String() + "\n\n")
