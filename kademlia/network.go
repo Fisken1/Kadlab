@@ -11,7 +11,6 @@ import (
 )
 
 type Network struct {
-	node   Kademlia
 	server *net.UDPConn
 }
 
@@ -34,44 +33,6 @@ func CreateKademliaMessage(messageType, key, value string, sender, receiver *Con
 	}
 }
 
-// This function is taken from "https://go.dev/play/p/BDt3qEQ_2H"
-func externalIP() (string, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", err
-	}
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
-		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return "", err
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue // not an ipv4 address
-			}
-			return ip.String(), nil
-		}
-	}
-	return "", errors.New("are you connected to the network?")
-}
-
 func (network *Network) Listen(contact Contact) {
 
 	addr := contact.Address + ":" + strconv.Itoa(contact.Port)
@@ -87,14 +48,23 @@ func (network *Network) Listen(contact Contact) {
 
 	for {
 		buf := make([]byte, 65536)
-		rlen, _, err := servr.ReadFromUDP(buf)
+		rlen, rem, err := servr.ReadFromUDP(buf)
 		if err != nil {
-			fmt.Println("Error reading from UDP:", err)
+			//fmt.Println("Error reading from UDP:", err)
 			continue
 		}
 
 		// Process the received data by passing it to the Dispatcher function.
-		go network.Dispatcher(buf[:rlen])
+		go func(connection *net.UDPConn) {
+			response, err := network.Dispatcher(buf[:rlen])
+			if err != nil {
+				log.Printf("Failed to handle response message: %v\n", err)
+				return
+			}
+			connection.WriteToUDP(response, rem)
+
+		}(servr)
+
 	}
 }
 
@@ -109,7 +79,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	switch msg.Type {
 	case "PING":
 		json.Unmarshal(data, &msg)
-		fmt.Println(msg.Sender.Address + " Sent the node printing this a PING")
+		fmt.Println(msg.Sender.Address + ":" + strconv.Itoa(msg.Sender.Port) + " Sent a PING to " + msg.Receiver.Address + ":" + strconv.Itoa(msg.Receiver.Port))
 		pong := CreateKademliaMessage("PONG", "", "", msg.Receiver, msg.Sender)
 		msgToSend, err := json.Marshal(pong)
 		return msgToSend, err
@@ -117,15 +87,15 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	case "FIND_NODE":
 		json.Unmarshal(data, &msg)
 		fmt.Println(msg.Sender.Address + " Sent the node printing this a FIND_NODE")
-		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, 7)
-		msgToSend, err := json.Marshal(closestNodes)
-		return msgToSend, err
+		//closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, 7)
+		//msgToSend, err := json.Marshal(closestNodes)
+		return nil, nil
 	//case "find_value":
 	//	HandleFindValue(msg)
 	//case "store":
 	//	HandleStore(msg)
 	default:
-		fmt.Println("Received unknown message type:", msg.Type)
+		fmt.Println(msg.Receiver.Address+":"+strconv.Itoa(msg.Receiver.Port)+" Received unknown message type:", msg.Type)
 	}
 	return nil, nil
 }
@@ -144,7 +114,7 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 		return err
 	}
 
-	fmt.Println(msg.Receiver.Address + "AKW YOUR PING")
+	fmt.Println(msg.Sender.Address + ":" + strconv.Itoa(msg.Sender.Port) + " AKW YOUR PING")
 	return nil
 }
 

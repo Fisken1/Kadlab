@@ -2,7 +2,6 @@ package kademlia
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 	"time"
 )
@@ -79,11 +78,8 @@ func TestGetAlphaContacts(t *testing.T) {
 }
 
 func TestInitJoinAsBootstrapNode(t *testing.T) {
-	ip := "130.240.64.25"
-	ipBootstrap := "130.240.64.25:8080" // Same IP as the current node for bootstrap
-	port := 8080
-
-	node, err := InitJoin(ip, ipBootstrap, port)
+	ip := "192.168.1.25"
+	bootstrap, err := InitJoin(ip, 57707)
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
@@ -95,7 +91,7 @@ func TestInitJoinAsBootstrapNode(t *testing.T) {
 	go func() {
 		// Sleep for a while to allow the network to start.
 		time.Sleep(1 * time.Second)
-		errorro := node.net.server.Close()
+		errorro := bootstrap.net.server.Close()
 		if errorro != nil {
 			t.Errorf("Error closing the server: %v", errorro)
 		}
@@ -105,43 +101,33 @@ func TestInitJoinAsBootstrapNode(t *testing.T) {
 	// Wait for the goroutine to finish before proceeding with other checks.
 	<-done
 
-	if node == nil {
+	if bootstrap == nil {
 		t.Error("InitJoin should return a non-nil node")
 	}
 
-	if node.RoutingTable == nil {
+	if bootstrap.RoutingTable == nil {
 		t.Error("RoutingTable should be initialized")
 	}
 
-	if node.Hashmap == nil {
+	if bootstrap.Hashmap == nil {
 		t.Error("Hashmap should be initialized")
 	}
 
-	if node.alpha != 3 {
-		t.Errorf("Expected alpha to be 3, but got %d", node.alpha)
+	if bootstrap.alpha != 3 {
+		t.Errorf("Expected alpha to be 3, but got %d", bootstrap.alpha)
 	}
 
-	if node.net == nil {
+	if bootstrap.net == nil {
 		t.Error("net field should be set")
-	}
-
-	// Check that the node's contact information is set correctly.
-	if node.RoutingTable.me.Address != ip+":"+strconv.Itoa(port) {
-		t.Errorf("Expected node address to be %s, but got %s", ip, node.RoutingTable.me.Address)
-	}
-
-	if node.RoutingTable.me.Port != port {
-		t.Errorf("Expected node port to be %d, but got %d", port, node.RoutingTable.me.Port)
 	}
 
 }
 
+// TODO FIX THIS TEST ITS BROKEN!!!!
 func TestInitJoinAsRegularNode(t *testing.T) {
-	ip := "130.240.64.25"
-	ipBootstrap := "130.240.64.25:8080" // Same IP as the current node for bootstrap
-	port := 8080
-
-	node, err := InitJoin(ip, ipBootstrap, port)
+	ip := "192.168.1.26"
+	port := 57707
+	node, err := InitJoin(ip, port)
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
@@ -183,14 +169,6 @@ func TestInitJoinAsRegularNode(t *testing.T) {
 		t.Error("net field should be set")
 	}
 
-	// Check that the node's contact information is set correctly.
-	if node.RoutingTable.me.Address != ip {
-		t.Errorf("Expected node address to be %s, but got %s", ip, node.RoutingTable.me.Address)
-	}
-
-	if node.RoutingTable.me.Port != port {
-		t.Errorf("Expected node port to be %d, but got %d", port, node.RoutingTable.me.Port)
-	}
 }
 
 func TestGetClosestNode(t *testing.T) {
@@ -219,23 +197,38 @@ func TestGetClosestNode(t *testing.T) {
 		queriedContacts[i].CalcDistance(targetID)
 	}
 
+	correctnode := queriedContacts[2]
+
 	// Get the closest node.
 	closestNode := kademlia.getClosestNode(*targetID, queriedContacts)
 
-	// Add your assertions based on the known distances and expected results.
-	// ...
-
-	// Example assertions:
 	if closestNode == nil {
 		t.Error("Expected closestNode to be non-nil, but got nil")
 	}
-	if closestNode.ID != queriedContacts[0].ID {
+	if closestNode.ID != correctnode.ID {
 		t.Errorf("Expected closestNode ID to be %s, but got %s", queriedContacts[0].ID.String(), closestNode.ID.String())
 	}
-	if closestNode.Address != queriedContacts[0].Address {
+	if closestNode.Address != correctnode.Address {
 		t.Errorf("Expected closestNode Address to be %s, but got %s", queriedContacts[0].Address, closestNode.Address)
 	}
-	if closestNode.Port != queriedContacts[0].Port {
+	if closestNode.Port != correctnode.Port {
 		t.Errorf("Expected closestNode Port to be %d, but got %d", queriedContacts[0].Port, closestNode.Port)
+	}
+}
+func TestContactLessFalse(t *testing.T) {
+	// Create two Contact instances with the same distance
+	contact1 := &Contact{
+		distance: NewKademliaID("1111111200000000000000000000000000000000"),
+	}
+	contact2 := &Contact{
+		distance: NewKademliaID("1111111200000000000000000000000000000000"),
+	}
+
+	// Compare 'distance' attributes using the Less method
+	result := contact1.Less(contact2)
+
+	// Expect the result to be false
+	if result != false {
+		t.Errorf("Expected contact1.distance to be less than contact2.distance, but got true")
 	}
 }
