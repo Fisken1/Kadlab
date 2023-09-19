@@ -59,6 +59,14 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 	// we need to add code that join needs here
 }
 
+// GetBootstrapIP Check if a node is bootstrap or not, this is hardcoded.
+func GetBootstrapIP(ip string) string {
+	stringList := strings.Split(ip, ".")
+	value := stringList[1]
+	bootstrapIP := "192." + value + ".1.26" // some arbitrary IP address hard coded to be bootstrap
+	return bootstrapIP
+}
+
 func (kademlia *Kademlia) fixNetwork() {
 
 	if kademlia.bootstrap {
@@ -114,14 +122,14 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 
 		// Send FIND_NODE RPCs to alpha contacts in the shortlist.
 		alphaContacts := kademlia.getAlphaContacts(closestNode, queriedContacts, k, contactedMap)
-		foundContacts, err := kademlia.QueryAlphaContacts(alphaContacts, target)
+		shortlist, err := kademlia.QueryAlphaContacts(alphaContacts, target)
 
 		if err != nil {
 			// Handle errors if the RPC fails.
 		}
 
 		// Update queriedContacts with the results.
-		queriedContacts = append(queriedContacts, foundContacts...)
+		queriedContacts = append(queriedContacts, shortlist...)
 
 		// Find the closest node among the newly queried contacts.
 		newClosestNode := kademlia.getClosestNode(*target.ID, queriedContacts)
