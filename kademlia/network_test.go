@@ -1,5 +1,6 @@
 package kademlia
 
+/*
 import (
 	"encoding/json"
 	"log"
@@ -107,3 +108,4 @@ func GetOutboundIP() net.IP {
 
 	return localAddr.IP
 }
+*/

@@ -106,7 +106,6 @@ func (kademlia *Kademlia) fixNetwork() {
 	if kademlia.bootstrap {
 		fmt.Println("You are the bootstrap node!")
 		return
-
 	}
 
 	err := kademlia.net.SendPingMessage(&kademlia.RoutingTable.me, kademlia.bootstrapContact)
@@ -181,26 +180,27 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 
 		fmt.Println("newClosestNode:", newClosestNode)
 
-		if err != nil {
-			// Handle errors if the RPC fails.
+		if closestNode != nil {
+			if newClosestNode.ID == closestNode.ID {
+				break
+			}
 		}
+		closestNode = newClosestNode
 
-		// Update queriedContacts with the results.
-		queriedContacts = append(queriedContacts, shortlist...)
+		fmt.Println("new(again)ClosestNode:", closestNode)
 
-		// Find the closest node among the newly queried contacts.
-		newClosestNode := kademlia.getClosestNode(*target.ID, queriedContacts)
-
-		// Check if the closest node has not changed.
-		if newClosestNode.ID == closestNode.ID {
-			// If no closer node is found in this cycle, stop the search.
+		if len(finalResult) >= k {
+			//fmt.Println("finito before:", closestNode.ID.String(), target.ID.String())
+			fmt.Println("finito")
 			break
 		}
 
-		closestNode = newClosestNode
+		fmt.Println("it continues...")
+
 	}
-	queriedContacts = kademlia.getKNodes(queriedContacts, target)
-	return queriedContacts, nil
+
+	fmt.Println("finalresult:", len(finalResult))
+	return finalResult, nil
 }
 
 func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMap map[string]bool) []Contact {
@@ -208,7 +208,7 @@ func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMa
 
 	// Find the closest contacts to the current node using FindClosestContacts.
 	closestContacts := kademlia.RoutingTable.FindClosestContacts(node.ID, alpha)
-
+	fmt.Println("now we are in getAlphaContacts and the amount of contacts found are: ", closestContacts)
 	// Iterate through the closest contacts and filter out those that have already been contacted.
 	for _, neighbor := range closestContacts {
 		// Check if the neighbor is not already in queriedContacts.
@@ -226,14 +226,14 @@ func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMa
 	return alphaContacts
 }
 
-func (kademlia *Kademlia) getClosestNode(targetID KademliaID, queriedContacts []Contact) *Contact {
+func (kademlia *Kademlia) getClosestNode(targetID KademliaID, contacts []Contact) *Contact {
 	var closest *Contact
 	var minDistance *KademliaID
 
 	fmt.Println("amount of contacts", len(contacts))
 
 	// Iterate through the queriedContacts to find the closest node.
-	for _, contact := range queriedContacts {
+	for _, contact := range contacts {
 		// Calculate the XOR distance between targetID and the contact's ID using CalcDistance method.
 		contact.CalcDistance(&targetID)
 
@@ -258,44 +258,57 @@ func (kademlia *Kademlia) getClosestNode(targetID KademliaID, queriedContacts []
 	return closest
 }
 
-func (kademlia *Kademlia) QueryAlphaContacts(alphaContacts []Contact, target *Contact) ([]Contact, error) {
+func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts map[string]bool, target *Contact) ([]Contact, map[string]bool, error) {
+	fmt.Println("contacts", contacts)
+	fmt.Println("alreadseen", alreadySeenContacts)
+	fmt.Println("target", target)
+
 	// Create channels to receive results and errors.
-	results := make(chan []Contact, len(alphaContacts))
-	errors := make(chan error, len(alphaContacts))
+	results := make(chan []Contact, len(contacts))
+	errors := make(chan error, len(contacts))
 
 	// Iterate through alphaContacts and send FIND_NODE RPCs in parallel.
-	for _, contact := range alphaContacts {
+	for _, contact := range contacts {
+		fmt.Println("this is the contact we are looking at now", contact)
 		go func(contact Contact) {
 			// Send a FIND_NODE RPC to the contact.
-			//HANDLE SEEN NODES!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			foundContacts, err := kademlia.net.SendFindContactMessage(&contact, target)
-			if err != nil {
-				// Handle the error and send it to the errors channel.
-				errors <- err
-			} else {
-				// Send the found contacts to the results channel.
-				results <- foundContacts
+			if alreadySeenContacts[contact.ID.String()] != true {
+				fmt.Println("alreadyseencontacts collision not true")
+				fmt.Println("\t\tWELL DOES THE NODE HAVE A NETWORK???", kademlia.net, " and this is the addr", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
+				foundContacts, err := kademlia.net.SendFindContactMessage(&contact, target)
+				alreadySeenContacts[contact.ID.String()] = true
+				if err != nil {
+					fmt.Println("error")
+					// Handle the error and send it to the errors channel.
+					errors <- err
+				} else {
+					fmt.Println("found a contact!")
+					// Send the found contacts to the results channel.
+					results <- foundContacts
+				}
 			}
 		}(contact)
 	}
 
 	// Collect the results from the channels.
-	var foundContacts []Contact
-	for i := 0; i < len(alphaContacts); i++ {
+	var newFoundContacts []Contact
+	for i := 0; i < len(contacts); i++ {
 		select {
 		case contacts := <-results:
+			fmt.Println("QueryContacts got a result")
 			// Add the found contacts to the result slice.
 			for _, contact := range contacts {
 				fmt.Println(contact.Address)
 			}
 			newFoundContacts = append(newFoundContacts, contacts...)
 		case err := <-errors:
+			fmt.Println("wow error in QueryContacts")
 			// Handle errors here if needed.
 			fmt.Printf("Error: %v\n", err)
 		}
 	}
 
-	return foundContacts, nil
+	return newFoundContacts, alreadySeenContacts, nil
 }
 
 // Trim list so that the length is k
@@ -309,6 +322,7 @@ func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Conta
 	// Calculate XOR distances for all contacts.
 	for i := range contacts {
 		contacts[i].CalcDistance(target.ID)
+		fmt.Println("getKNodes, len of one of the nodes:", contacts[i])
 	}
 
 	// Sort the contacts based on their XOR distances.

@@ -25,13 +25,14 @@ type KademliaMessage struct {
 	Contacts []Contact `json:"contacts,omitempty"`
 }
 
-func CreateKademliaMessage(messageType, key, value string, sender, receiver *Contact) KademliaMessage {
+func CreateKademliaMessage(messageType, key, value string, sender, receiver *Contact, contacts []Contact) KademliaMessage {
 	return KademliaMessage{
 		Type:     messageType,
 		Sender:   sender,
 		Receiver: receiver,
 		Key:      key,
 		Value:    value,
+		Contacts: contacts,
 	}
 }
 
@@ -82,8 +83,16 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	case "PING":
 		json.Unmarshal(data, &msg)
 		fmt.Println(msg.Sender.Address + ":" + strconv.Itoa(msg.Sender.Port) + " Sent a PING to " + msg.Receiver.Address + ":" + strconv.Itoa(msg.Receiver.Port))
-		pong := CreateKademliaMessage("PONG", "", "", msg.Receiver, msg.Sender)
+		pong := CreateKademliaMessage(
+			"PONG",
+			"",
+			"",
+			msg.Receiver,
+			msg.Sender,
+			[]Contact{},
+		)
 		msgToSend, err := json.Marshal(pong)
+		network.node.RoutingTable.AddContact(*msg.Sender)
 		return msgToSend, err
 
 	case "FIND_NODE":
@@ -106,14 +115,23 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	//case "store":
 	//	HandleStore(msg)
 	default:
-		fmt.Println(msg.Receiver.Address+":"+strconv.Itoa(msg.Receiver.Port)+" Received unknown message type:", msg.Type)
+		fmt.Println("Received unknown message type:", msg.Type)
 	}
 	return nil, nil
 }
 
 func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) error {
-	pingMessage := CreateKademliaMessage("PING", "", "", sender, receiver)
+
+	pingMessage := CreateKademliaMessage(
+		"PING",
+		"",
+		"",
+		sender,
+		receiver,
+		[]Contact{},
+	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
+
 	data, err := network.Send(addr, pingMessage)
 	if err != nil {
 		log.Printf("Ping failed: %v\n", err)
@@ -130,20 +148,34 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 }
 
 func (network *Network) SendFindContactMessage(receiver *Contact, target *Contact) ([]Contact, error) {
-	pingMessage := CreateKademliaMessage("FIND_NODE", "", "", receiver, target)
+	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
+	fmt.Println("\t\tTarget we are looking for", target.Address+":"+strconv.Itoa(target.Port))
+	message := CreateKademliaMessage(
+		"FIND_NODE",
+		"",
+		"",
+		receiver,
+		target,
+		[]Contact{},
+	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	data, err := network.Send(addr, pingMessage)
+	fmt.Println("\t\tNOW SENDING FIND_NODE")
+	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
 		return nil, err
 	}
-	var msg []Contact
+	var msg KademliaMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		fmt.Println("\t\t\t Error decoding message:", err)
 		return nil, err
 	}
-
-	return msg, nil
+	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
+	fmt.Println("\t\t\t msg", msg)
+	for _, contact := range msg.Contacts {
+		fmt.Println("\t\t\tthis is one contact returned from FIND_NODE rpc", contact)
+	}
+	return msg.Contacts, nil
 }
 
 func (network *Network) SendFindDataMessage(hash string) {
@@ -155,6 +187,7 @@ func (network *Network) SendStoreMessage(data []byte) {
 }
 
 func (network *Network) Send(addr string, msg KademliaMessage) ([]byte, error) {
+	fmt.Println("we are now sending")
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		fmt.Println("Error resolving UDP address:", err)
