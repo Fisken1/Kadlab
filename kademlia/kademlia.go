@@ -203,7 +203,7 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 	return queriedContacts, nil
 }
 
-func (kademlia *Kademlia) getAlphaContacts(node *Contact, queriedContacts []Contact, alpha int, contactedMap map[string]bool) []Contact {
+func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMap map[string]bool) []Contact {
 	var alphaContacts []Contact
 
 	// Find the closest contacts to the current node using FindClosestContacts.
@@ -285,7 +285,10 @@ func (kademlia *Kademlia) QueryAlphaContacts(alphaContacts []Contact, target *Co
 		select {
 		case contacts := <-results:
 			// Add the found contacts to the result slice.
-			foundContacts = append(foundContacts, contacts...)
+			for _, contact := range contacts {
+				fmt.Println(contact.Address)
+			}
+			newFoundContacts = append(newFoundContacts, contacts...)
 		case err := <-errors:
 			// Handle errors here if needed.
 			fmt.Printf("Error: %v\n", err)
@@ -295,6 +298,7 @@ func (kademlia *Kademlia) QueryAlphaContacts(alphaContacts []Contact, target *Co
 	return foundContacts, nil
 }
 
+// Trim list so that the length is k
 func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Contact {
 	// Ensure k is within the bounds of the contacts slice.
 	k := kademlia.k
