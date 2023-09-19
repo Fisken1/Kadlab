@@ -13,20 +13,31 @@ func Cli(kademlia *Kademlia, port int) {
 	for {
 		scanner.Scan()
 		text := scanner.Text()
+
 		if len(text) > 0 {
+			fmt.Println("we are in if sats")
 			input := strings.Fields(text)
 			answer := CliHandler(input, kademlia, port)
 			fmt.Print(answer + "\n> ")
 
 		} else {
-			fmt.Print(Usage() + "\n> ")
+			continue
 		}
 	}
 }
 
 func CliHandler(input []string, node *Kademlia, port int) string {
+	fmt.Println("we are in clihandler")
 	answer := ""
 	switch input[0] {
+
+	case "getContact":
+		fmt.Println("getcontact")
+		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
+
+		for _, contacts := range node.RoutingTable.buckets {
+			fmt.Println(contacts.list)
+		}
 
 	case "put":
 		/*
@@ -44,6 +55,7 @@ func CliHandler(input []string, node *Kademlia, port int) string {
 		Terminate()
 
 	default:
+		fmt.Println("something in default")
 		return "Operation: >>" + input[0] + "<< not found." + "\n" + Usage()
 	}
 	return answer

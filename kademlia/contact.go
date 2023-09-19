@@ -48,6 +48,9 @@ func (candidates *ContactCandidates) Append(contacts []Contact) {
 
 // GetContacts returns the first count number of Contacts
 func (candidates *ContactCandidates) GetContacts(count int) []Contact {
+	for _, contact := range candidates.contacts {
+		fmt.Println("IP IN GETCONTACTS", contact.Address)
+	}
 	return candidates.contacts[:count]
 }
 

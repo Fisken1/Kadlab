@@ -2,17 +2,25 @@ package main
 
 import (
 	"Kadlab/kademlia"
+	"fmt"
 	"log"
 	"net"
+	"os"
 )
 
 func main() {
 
-	//fmt.Println("IP: ", GetOutboundIP())
+	fmt.Println("IP: ", GetOutboundIP())
 
-	node, _ := kademlia.InitJoin(GetOutboundIP().String(), 8080)
+	node, err := kademlia.InitJoin(GetOutboundIP().String(), 5000)
+	if err != nil {
+		os.Exit(0)
+	}
+
 	go kademlia.Cli(node, 9090)
+
 	select {}
+
 }
 
 func GetOutboundIP() net.IP {

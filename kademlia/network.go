@@ -11,16 +11,18 @@ import (
 )
 
 type Network struct {
+	node   *Kademlia
 	server *net.UDPConn
 }
 
 // KademliaMessage represents a Kademlia message.
 type KademliaMessage struct {
-	Type     string   `json:"Type"`
-	Sender   *Contact `json:"SenderID"`
-	Receiver *Contact `json:"NodeID"`
-	Key      string   `json:"Data,omitempty"`
-	Value    string   `json:"Key,omitempty"`
+	Type     string    `json:"Type"`
+	Sender   *Contact  `json:"SenderID"`
+	Receiver *Contact  `json:"NodeID"`
+	Key      string    `json:"Data,omitempty"`
+	Value    string    `json:"Key,omitempty"`
+	Contacts []Contact `json:"contacts,omitempty"`
 }
 
 func CreateKademliaMessage(messageType, key, value string, sender, receiver *Contact) KademliaMessage {
@@ -87,9 +89,18 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	case "FIND_NODE":
 		json.Unmarshal(data, &msg)
 		fmt.Println(msg.Sender.Address + " Sent the node printing this a FIND_NODE")
-		//closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, 7)
-		//msgToSend, err := json.Marshal(closestNodes)
-		return nil, nil
+		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
+		fmt.Println("closest nodes: ", closestNodes)
+		find := CreateKademliaMessage(
+			"FIND_NODE_RESPONSE",
+			"",
+			"",
+			msg.Receiver,
+			msg.Sender,
+			closestNodes,
+		)
+		msgToSend, err := json.Marshal(find)
+		return msgToSend, err
 	//case "find_value":
 	//	HandleFindValue(msg)
 	//case "store":
@@ -128,7 +139,7 @@ func (network *Network) SendFindContactMessage(receiver *Contact, target *Contac
 	}
 	var msg []Contact
 	if err := json.Unmarshal(data, &msg); err != nil {
-		fmt.Println("Error decoding message:", err)
+		fmt.Println("\t\t\t Error decoding message:", err)
 		return nil, err
 	}
 

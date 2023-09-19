@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Kademlia struct {
@@ -27,18 +28,36 @@ func InitNode(me Contact) *Kademlia {
 		Hashmap:      make(map[string][]byte),
 		alpha:        3,
 	}
-	node.net = &Network{nil}
+	node.net = &Network{node: node}
 	fmt.Print("INITNODE", me.ID.String(), me.Address)
 	return node
 }
 
 func InitJoin(ip string, port int) (*Kademlia, error) {
-
+	fmt.Println(GetBootstrapIP(ip))
+	fmt.Println(ip + "." + strconv.Itoa(port))
 	if ip+":"+strconv.Itoa(port) == GetBootstrapIP(ip)+":"+strconv.Itoa(port) {
+		fmt.Println("WE ARE BOOTSTRAP")
 		bootstrap := InitNode(NewContact(NewKademliaID(BootstrapKademliaID), GetBootstrapIP(ip), port))
 		bootstrap.bootstrap = true
 		bootstrap.RoutingTable.me.Port = port
 		go bootstrap.net.Listen(bootstrap.RoutingTable.me)
+
+		// Use a channel for synchronization.
+		done := make(chan bool)
+
+		// Start a goroutine to close the network and signal when done.
+		go func() {
+			// Sleep for a while to allow the network to start.
+			time.Sleep(1 * time.Second)
+
+			done <- true
+		}()
+
+		<-done
+
+		bootstrap.fixNetwork()
+
 		return bootstrap, nil
 	} else {
 		node := InitNode(NewContact(NewRandomKademliaID(), ip, port))
@@ -53,6 +72,21 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 		node.bootstrapContact = &contact
 		go node.net.Listen(node.RoutingTable.me)
 
+		// Use a channel for synchronization.
+		done := make(chan bool)
+
+		// Start a goroutine to close the network and signal when done.
+		go func() {
+			// Sleep for a while to allow the network to start.
+			time.Sleep(1 * time.Second)
+
+			done <- true
+		}()
+
+		<-done
+
+		node.fixNetwork()
+
 		return node, nil
 	}
 
@@ -63,7 +97,7 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 func GetBootstrapIP(ip string) string {
 	stringList := strings.Split(ip, ".")
 	value := stringList[1]
-	bootstrapIP := "192." + value + ".1.26" // some arbitrary IP address hard coded to be bootstrap
+	bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
 	return bootstrapIP
 }
 
@@ -86,10 +120,12 @@ func (kademlia *Kademlia) fixNetwork() {
 	if err != nil {
 		return
 	}
+
+	fmt.Println("THIS IS US", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
 	for _, contact := range contacts {
 		kademlia.RoutingTable.AddContact(contact)
+		fmt.Println("\t\tCONTACT", contact.Address+":"+strconv.Itoa(contact.Port))
 	}
-
 }
 
 // performNodeLookup performs a FIND_NODE or FIND_VALUE RPC to a contact.
@@ -110,19 +146,40 @@ func (kademlia *Kademlia) Store(data []byte) {
 func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 	// Initialize variables
 	k := kademlia.k
-	queriedContacts := []Contact{}
 	contactedMap := make(map[string]bool)
-	closestNode := kademlia.getClosestNode(*target.ID, queriedContacts)
-
+	var closestNode *Contact = nil
+	var finalResult []Contact = nil
 	for {
-		// Check if you have accumulated k active contacts or found the closest node.
-		if len(queriedContacts) >= k || closestNode.ID == target.ID {
-			break
-		}
+		//one cycle is two rounds!!!
 
-		// Send FIND_NODE RPCs to alpha contacts in the shortlist.
-		alphaContacts := kademlia.getAlphaContacts(closestNode, queriedContacts, k, contactedMap)
-		shortlist, err := kademlia.QueryAlphaContacts(alphaContacts, target)
+		//Round 1
+		alphaContacts := kademlia.getAlphaContacts(target, kademlia.alpha, contactedMap)
+
+		fmt.Println("len alphaContacts:", len(alphaContacts))
+
+		shortlist, contactedMap, err := kademlia.QueryContacts(alphaContacts, contactedMap, target)
+		if err != nil {
+			fmt.Println("Error in round 1! ", err)
+		}
+		shortlist = kademlia.getKNodes(shortlist, target)
+
+		fmt.Println("len shortlist after round one ", len(shortlist))
+
+		fmt.Println("round one done! ", err)
+		//Round 2
+		shortlist, contactedMap, err = kademlia.QueryContacts(shortlist, contactedMap, target)
+		if err != nil {
+			fmt.Println("Error in round 2! ", err)
+		}
+		finalResult = kademlia.getKNodes(shortlist, target)
+
+		fmt.Println("len shortlist after round two ", len(shortlist))
+
+		fmt.Println("round two done! ", err)
+		//cycle is done get closest node
+		newClosestNode := kademlia.getClosestNode(*target.ID, finalResult)
+
+		fmt.Println("newClosestNode:", newClosestNode)
 
 		if err != nil {
 			// Handle errors if the RPC fails.
@@ -157,6 +214,7 @@ func (kademlia *Kademlia) getAlphaContacts(node *Contact, queriedContacts []Cont
 		// Check if the neighbor is not already in queriedContacts.
 		if _, alreadyContacted := contactedMap[neighbor.ID.String()]; !alreadyContacted {
 			alphaContacts = append(alphaContacts, neighbor)
+			fmt.Println("Alphacontact add:", neighbor.Address+":"+strconv.Itoa(neighbor.Port))
 		}
 
 		// Stop if we have collected enough alpha contacts.
@@ -172,10 +230,14 @@ func (kademlia *Kademlia) getClosestNode(targetID KademliaID, queriedContacts []
 	var closest *Contact
 	var minDistance *KademliaID
 
+	fmt.Println("amount of contacts", len(contacts))
+
 	// Iterate through the queriedContacts to find the closest node.
 	for _, contact := range queriedContacts {
 		// Calculate the XOR distance between targetID and the contact's ID using CalcDistance method.
 		contact.CalcDistance(&targetID)
+
+		fmt.Print("contact", contact.Address)
 
 		// If closest is nil or the current contact is closer, update closest and minDistance.
 		if closest == nil || contact.distance.Less(minDistance) {
