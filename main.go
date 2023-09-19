@@ -7,8 +7,11 @@ import (
 )
 
 func main() {
-	node, _ := kademlia.InitJoin(GetOutboundIP().String(), 8081)
-	kademlia.Cli(node, 9090)
+
+	//fmt.Println("IP: ", GetOutboundIP())
+
+	node, _ := kademlia.InitJoin(GetOutboundIP().String(), 8080)
+	go kademlia.Cli(node, 9090)
 	select {}
 }
 
