@@ -62,6 +62,8 @@ func CliHandler(input []string, node *Kademlia) string {
 		 (b) get: Takes a hash as its only argument, and outputs the contents of the object and the
 		 node it was retrieved from, if it could be downloaded successfully.
 		*/
+	case "printID": //debug
+		fmt.Println(node.RoutingTable.me.ID.String())
 
 	case "exit", "q":
 		Terminate()

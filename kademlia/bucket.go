@@ -54,7 +54,6 @@ func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
 		contact.CalcDistance(target)
 		contacts = append(contacts, contact)
 	}
-	fmt.Println("\t\t\tGetContactAndCalcDistance:", contacts)
 	return contacts
 }
 

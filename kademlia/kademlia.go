@@ -27,6 +27,7 @@ func InitNode(me Contact) *Kademlia {
 		RoutingTable: NewRoutingTable(me),
 		Hashmap:      make(map[string][]byte),
 		alpha:        3,
+		k:            3,
 	}
 	node.net = &Network{node: node}
 	fmt.Print("THIS IS HOW THE NODE LOOKS LIKE AFTER WE CREATE IT ", me.ID.String(), me.Address, me.ID)
@@ -120,7 +121,7 @@ func (kademlia *Kademlia) fixNetwork() {
 		return
 	}
 
-	fmt.Println("THIS IS US", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
+	fmt.Println("THIS IS US", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port), "AND THESE ARE THE CONTACTS THAT WE ARE ADDING TO THE ")
 	for _, contact := range contacts {
 		kademlia.RoutingTable.AddContact(contact)
 		fmt.Println("\t\tCONTACT", contact.Address+":"+strconv.Itoa(contact.Port))
@@ -146,12 +147,20 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 	// Initialize variables
 	k := kademlia.k
 	contactedMap := make(map[string]bool)
-	var closestNode *Contact = nil
+	var closestNode *Contact = nil //this is only nil the first cycle
+	var newClosestNode *Contact = nil
 	var finalResult []Contact = nil
 	for {
 		//one cycle is two rounds!!!
-
 		//Round 1
+
+		if len(finalResult) >= k {
+			//fmt.Println("finito before:", closestNode.ID.String(), target.ID.String())
+			fmt.Println("finito")
+			break
+		}
+
+		newClosestNode = closestNode
 		alphaContacts := kademlia.getAlphaContacts(target, kademlia.alpha, contactedMap)
 
 		fmt.Println("len alphaContacts:", len(alphaContacts))
@@ -170,16 +179,19 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 		if err != nil {
 			fmt.Println("Error in round 2! ", err)
 		}
-		finalResult = kademlia.getKNodes(shortlist, target)
+		if len(shortlist) != 0 {
+			finalResult = kademlia.getKNodes(shortlist, target)
+		}
 
 		fmt.Println("len shortlist after round two ", len(shortlist))
 
 		fmt.Println("round two done! ", err)
 		//cycle is done get closest node
-		newClosestNode := kademlia.getClosestNode(*target.ID, finalResult)
+		if len(finalResult) != 0 {
+			newClosestNode = kademlia.getClosestNode(*target.ID, finalResult)
+		}
 
 		fmt.Println("newClosestNode:", newClosestNode)
-
 		if closestNode != nil {
 			if newClosestNode.ID == closestNode.ID {
 				break
@@ -188,12 +200,6 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 		closestNode = newClosestNode
 
 		fmt.Println("new(again)ClosestNode:", closestNode)
-
-		if len(finalResult) >= k {
-			//fmt.Println("finito before:", closestNode.ID.String(), target.ID.String())
-			fmt.Println("finito")
-			break
-		}
 
 		fmt.Println("it continues...")
 
@@ -208,7 +214,7 @@ func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMa
 
 	// Find the closest contacts to the current node using FindClosestContacts.
 	closestContacts := kademlia.RoutingTable.FindClosestContacts(node.ID, alpha)
-	fmt.Println("now we are in getAlphaContacts and the amount of contacts found are: ", closestContacts)
+	fmt.Println("now we are in getAlphaContacts and the amount of contacts found are: ", closestContacts, "and these are the contacts in the map", contactedMap)
 	// Iterate through the closest contacts and filter out those that have already been contacted.
 	for _, neighbor := range closestContacts {
 		// Check if the neighbor is not already in queriedContacts.
@@ -237,7 +243,7 @@ func (kademlia *Kademlia) getClosestNode(targetID KademliaID, contacts []Contact
 		// Calculate the XOR distance between targetID and the contact's ID using CalcDistance method.
 		contact.CalcDistance(&targetID)
 
-		fmt.Print("contact", contact.Address)
+		fmt.Print("WOW THE CONTACT WE ARE LOOKING AT JUST GOT A DISTANCE", contact.ID, contact.distance)
 
 		// If closest is nil or the current contact is closer, update closest and minDistance.
 		if closest == nil || contact.distance.Less(minDistance) {
