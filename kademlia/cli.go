@@ -35,8 +35,14 @@ func CliHandler(input []string, node *Kademlia, port int) string {
 		fmt.Println("getcontact")
 		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
 
-		for _, contacts := range node.RoutingTable.buckets {
-			fmt.Println(contacts.list)
+		for i, a := range node.RoutingTable.buckets {
+			if a.list != nil { // Check if the list is not nil
+				for e := a.list.Front(); e != nil; e = e.Next() {
+					if e.Value != nil {
+						fmt.Println("value in bucket", i, "is", e.Value)
+					}
+				}
+			}
 		}
 
 	case "put":

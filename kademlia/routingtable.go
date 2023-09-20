@@ -38,19 +38,19 @@ func (routingTable *RoutingTable) FindClosestContacts(target *KademliaID, count 
 	candidates.Append(bucket.GetContactAndCalcDistance(target))
 
 	for i := 1; (bucketIndex-i >= 0 || bucketIndex+i < IDLength*8) && candidates.Len() < count; i++ {
-		fmt.Println("\t\t\tFindClosestContacts: we got into the for loop")
+		//fmt.Println("\t\t\tFindClosestContacts: we got into the for loop")
 		if bucketIndex-i >= 0 {
-			fmt.Println("\t\t\tFindClosestContacts: we got into the first if statement")
+			//fmt.Println("\t\t\tFindClosestContacts: we got into the first if statement")
 			bucket = routingTable.buckets[bucketIndex-i]
 			candidates.Append(bucket.GetContactAndCalcDistance(target))
 		}
 		if bucketIndex+i < IDLength*8 {
-			fmt.Println("\t\t\tFindClosestContacts: we got into the 2nd if statement")
+			//fmt.Println("\t\t\tFindClosestContacts: we got into the 2nd if statement")
 			bucket = routingTable.buckets[bucketIndex+i]
 			candidates.Append(bucket.GetContactAndCalcDistance(target))
 		}
 	}
-	fmt.Println("\t\t\tFindClosestContacts: we are now sorting:", candidates.contacts)
+	//fmt.Println("\t\t\tFindClosestContacts: we are now sorting:", candidates.contacts)
 	candidates.Sort()
 
 	if count > candidates.Len() {

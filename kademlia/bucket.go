@@ -3,6 +3,7 @@ package kademlia
 import (
 	"container/list"
 	"fmt"
+	"strconv"
 )
 
 // bucket definition
@@ -21,7 +22,7 @@ func newBucket() *bucket {
 // AddContact adds the Contact to the front of the bucket
 // or moves it to the front of the bucket if it already existed
 func (bucket *bucket) AddContact(contact Contact) {
-	fmt.Println("\t\tWE ARE IN THIS BUCKET", bucket)
+	fmt.Println("\t\tWE ARE IN THIS BUCKET", bucket, "and the ID of the contact is", contact.ID.String(), contact.Address+":"+strconv.Itoa(contact.Port))
 
 	var element *list.Element
 	for e := bucket.list.Front(); e != nil; e = e.Next() {

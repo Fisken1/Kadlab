@@ -29,7 +29,7 @@ func InitNode(me Contact) *Kademlia {
 		alpha:        3,
 	}
 	node.net = &Network{node: node}
-	fmt.Print("INITNODE", me.ID.String(), me.Address)
+	fmt.Print("THIS IS HOW THE NODE LOOKS LIKE AFTER WE CREATE IT ", me.ID.String(), me.Address, me.ID)
 	return node
 }
 
