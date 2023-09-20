@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func Cli(kademlia *Kademlia, port int) {
+func Cli(kademlia *Kademlia) {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("KADEMLIA> ")
 	for {
@@ -17,7 +17,7 @@ func Cli(kademlia *Kademlia, port int) {
 		if len(text) > 0 {
 			fmt.Println("we are in if sats")
 			input := strings.Fields(text)
-			answer := CliHandler(input, kademlia, port)
+			answer := CliHandler(input, kademlia)
 			fmt.Print(answer + "KADEMLIA> ")
 
 		} else {
@@ -26,7 +26,7 @@ func Cli(kademlia *Kademlia, port int) {
 	}
 }
 
-func CliHandler(input []string, node *Kademlia, port int) string {
+func CliHandler(input []string, node *Kademlia) string {
 	fmt.Println("we are in clihandler")
 	answer := ""
 	switch input[0] {
