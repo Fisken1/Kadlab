@@ -9,7 +9,7 @@ import (
 
 func Cli(kademlia *Kademlia, port int) {
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print(">")
+	fmt.Print("KADEMLIA> ")
 	for {
 		scanner.Scan()
 		text := scanner.Text()
@@ -18,10 +18,10 @@ func Cli(kademlia *Kademlia, port int) {
 			fmt.Println("we are in if sats")
 			input := strings.Fields(text)
 			answer := CliHandler(input, kademlia, port)
-			fmt.Print(answer + "\n> ")
+			fmt.Print(answer + "KADEMLIA> ")
 
 		} else {
-			continue
+			fmt.Print("KADEMLIA> ")
 		}
 	}
 }
@@ -30,6 +30,12 @@ func CliHandler(input []string, node *Kademlia, port int) string {
 	fmt.Println("we are in clihandler")
 	answer := ""
 	switch input[0] {
+
+	case "printADDRESS":
+		fmt.Println(node.RoutingTable.me.Address)
+
+	case "printID": //debug
+		fmt.Println(node.RoutingTable.me.ID.String())
 
 	case "getContact":
 		fmt.Println("getcontact")
