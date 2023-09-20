@@ -128,13 +128,6 @@ func (kademlia *Kademlia) fixNetwork() {
 	}
 }
 
-// performNodeLookup performs a FIND_NODE or FIND_VALUE RPC to a contact.
-func (kademlia *Kademlia) performNodeLookup(contact *Contact, target *Contact) []Contact {
-	// Implement RPC logic here and return a list of contacts received
-	// TODO
-	return nil
-}
-
 func (kademlia *Kademlia) LookupData(hash string) {
 	// TODO
 }
@@ -181,6 +174,7 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 		}
 		if len(shortlist) != 0 {
 			finalResult = kademlia.getKNodes(shortlist, target)
+			break
 		}
 
 		fmt.Println("len shortlist after round two ", len(shortlist))
@@ -281,7 +275,7 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts 
 			if alreadySeenContacts[contact.ID.String()] != true {
 				fmt.Println("alreadyseencontacts collision not true")
 				fmt.Println("\t\tWELL DOES THE NODE HAVE A NETWORK???", kademlia.net, " and this is the addr", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
-				foundContacts, err := kademlia.net.SendFindContactMessage(&contact, target)
+				foundContacts, err := kademlia.net.SendFindContactMessage(&kademlia.RoutingTable.me, &contact, target)
 				alreadySeenContacts[contact.ID.String()] = true
 				if err != nil {
 					fmt.Println("error")

@@ -34,9 +34,6 @@ func CliHandler(input []string, node *Kademlia) string {
 	case "printADDRESS":
 		fmt.Println(node.RoutingTable.me.Address)
 
-	case "printID": //debug
-		fmt.Println(node.RoutingTable.me.ID.String())
-
 	case "getContact":
 		fmt.Println("getcontact")
 		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
@@ -45,10 +42,11 @@ func CliHandler(input []string, node *Kademlia) string {
 			if a.list != nil { // Check if the list is not nil
 				for e := a.list.Front(); e != nil; e = e.Next() {
 					if e.Value != nil {
-						fmt.Println("value in bucket", i, "is", e.Value)
+						fmt.Println("value in bucket", a, "is", e.Value)
 					}
 				}
 			}
+			i++
 		}
 
 	case "put":

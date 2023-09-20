@@ -17,7 +17,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	go kademlia.Cli(node, 9090)
+	go kademlia.Cli(node)
 
 	select {}
 
