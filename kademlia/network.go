@@ -21,8 +21,8 @@ type KademliaMessage struct {
 	Sender   *Contact  `json:"SenderID"`
 	Receiver *Contact  `json:"NodeID"`
 	Target   *Contact  `json:"TargetID"`
-	Key      string    `json:"Data,omitempty"`
-	Value    string    `json:"Key,omitempty"`
+	Key      string    `json:"Key,omitempty"`
+	Value    string    `json:"Data,omitempty"`
 	Contacts []Contact `json:"contacts,omitempty"`
 }
 
@@ -228,7 +228,7 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 
 func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash string) ([]Contact, string, error) {
 	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
-	fmt.Println("\t\tTarget we are looking for", target.Address+":"+strconv.Itoa(target.Port))
+
 	message := CreateKademliaMessage(
 		"FIND_VALUE",
 		"",

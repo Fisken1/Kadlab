@@ -204,7 +204,20 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, string) {
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
-	// TODO
+	keyString := hex.EncodeToString(sha1.New().Sum(data))
+	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
+	contacts, err := kademlia.LookupNode(&target)
+	results := make(chan string, kademlia.alpha)
+	if err != nil {
+		panic(err)
+	}
+	//TODO choose duplicate amount currently alpha duplicates
+
+	for i := 0; i < len(contacts) && i < kademlia.alpha; i++ {
+		msg, _ := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], keyString, data)
+		results <- msg
+	}
+
 }
 
 func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
