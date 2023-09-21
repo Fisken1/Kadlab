@@ -263,8 +263,40 @@ func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash stri
 	}
 }
 
-func (network *Network) SendStoreMessage(data []byte) {
+func (network *Network) SendStoreMessage(sender, receiver *Contact, key string, value []byte) (string, error) {
 	// TODO
+	message := CreateKademliaMessage(
+		"STORE",
+		key,
+		string(value),
+		sender,
+		receiver,
+		nil,
+		nil,
+	)
+	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
+	fmt.Println("\t\tNOW SENDING STORE")
+	data, err := network.Send(addr, message)
+	if err != nil {
+		log.Printf("FIND_NODE FAILED: %v\n", err)
+		return "", err
+	}
+	var msg KademliaMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		fmt.Println("\t\t\t Error decoding message:", err)
+		return "", err
+	}
+	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
+	fmt.Println("\t\t\t msg", msg)
+	switch msg.Type {
+	case "STORE_SUCCESSFUL":
+		return msg.Sender.Address + " STORE_SUCCESSFUL", nil
+	case "STORE_FAILED":
+		return msg.Sender.Address + " STORE_FAILED", nil
+	default:
+		fmt.Println("\t\t\t FIND VALUE GOT A MESSAGE IT DID NOT EXPECT!!!!!!!!!!", msg.Type)
+		return "", nil
+	}
 }
 
 func (network *Network) Send(addr string, msg KademliaMessage) ([]byte, error) {
