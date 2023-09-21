@@ -83,7 +83,10 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 
 	switch msg.Type {
 	case "PING":
-		json.Unmarshal(data, &msg)
+		err := json.Unmarshal(data, &msg)
+		if err != nil {
+			return nil, err
+		}
 		fmt.Println(msg.Sender.Address + ":" + strconv.Itoa(msg.Sender.Port) + " Sent a PING to " + msg.Receiver.Address + ":" + strconv.Itoa(msg.Receiver.Port))
 		pong := CreateKademliaMessage(
 			"PONG",
@@ -99,8 +102,11 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		return msgToSend, err
 
 	case "FIND_NODE":
-		json.Unmarshal(data, &msg)
-		fmt.Println(msg.Sender.Address + " Sent the node printing this a FIND_NODE")
+		err := json.Unmarshal(data, &msg)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_NODE rpc to us")
 		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
 		fmt.Println("closest nodes: ", closestNodes)
 		find := CreateKademliaMessage(
@@ -115,9 +121,43 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		msgToSend, err := json.Marshal(find)
 		network.node.RoutingTable.AddContact(*msg.Sender)
 		return msgToSend, err
-	//case "find_value":
-	//	HandleFindValue(msg)
-	//case "store":
+	case "FIND_VALUE":
+		err := json.Unmarshal(data, &msg)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_VALUE rpc to us")
+
+		if value, exists := network.node.Hashmap[msg.Key]; exists {
+			valueFound := CreateKademliaMessage(
+				"FIND_VALUE_RESPONSE",
+				"",
+				string(value),
+				msg.Receiver,
+				msg.Sender,
+				msg.Target,
+				nil,
+			)
+			theValueToSend, err := json.Marshal(valueFound)
+			return theValueToSend, err
+		} else {
+			closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
+			fmt.Println("closest nodes: ", closestNodes)
+			find := CreateKademliaMessage(
+				"FIND_VALUE_CONTACTS",
+				"",
+				"",
+				msg.Receiver,
+				msg.Sender,
+				msg.Target,
+				closestNodes,
+			)
+			msgToSend, err := json.Marshal(find)
+			//network.node.RoutingTable.AddContact(*msg.Sender)
+			return msgToSend, err
+		}
+
+	case "STORE":
 	//	HandleStore(msg)
 	default:
 		network.node.RoutingTable.AddContact(*msg.Sender)
@@ -186,36 +226,41 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 	return msg.Contacts, nil
 }
 
-func (network *Network) SendFindDataMessage(sender, receiver, target *Contact, hash string) ([]Contact, error) {
+func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash string) ([]Contact, string, error) {
 	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
 	fmt.Println("\t\tTarget we are looking for", target.Address+":"+strconv.Itoa(target.Port))
 	message := CreateKademliaMessage(
 		"FIND_VALUE",
 		"",
-		"",
+		hash,
 		sender,
 		receiver,
-		target,
+		nil,
 		[]Contact{},
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	fmt.Println("\t\tNOW SENDING FIND_NODE")
+	fmt.Println("\t\tNOW SENDING FIND_VALUE")
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
-		return nil, err
+		return nil, "", err
 	}
 	var msg KademliaMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		fmt.Println("\t\t\t Error decoding message:", err)
-		return nil, err
+		return nil, "", err
 	}
 	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
 	fmt.Println("\t\t\t msg", msg)
-	for _, contact := range msg.Contacts {
-		fmt.Println("\t\t\tthis is one contact returned from FIND_NODE rpc", contact)
+	switch msg.Type {
+	case "FIND_VALUE_RESPONSE":
+		return nil, msg.Value, nil
+	case "FIND_VALUE_CONTACTS":
+		return msg.Contacts, "", nil
+	default:
+		fmt.Println("\t\t\t FIND VALUE GOT A MESSAGE IT DID NOT EXPECT!!!!!!!!!!", msg.Type)
+		return nil, "", nil
 	}
-	return msg.Contacts, nil
 }
 
 func (network *Network) SendStoreMessage(data []byte) {
