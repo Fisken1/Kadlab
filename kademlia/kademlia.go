@@ -105,7 +105,6 @@ func GetBootstrapIP(ip string) string {
 }
 
 func (kademlia *Kademlia) fixNetwork() {
-
 	if kademlia.bootstrap {
 		fmt.Println("You are the bootstrap node!")
 		return
@@ -205,7 +204,8 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, string) {
 
 }
 
-func (kademlia *Kademlia) Store(data []byte) {
+// Måste returna en boolean eller string för att veta om det var successful eller inte.
+func (kademlia *Kademlia) Store(data []byte) (hash string) {
 	keyString := hex.EncodeToString(sha1.New().Sum(data))
 	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
 	contacts, err := kademlia.LookupNode(&target)
@@ -219,6 +219,12 @@ func (kademlia *Kademlia) Store(data []byte) {
 		msg, _ := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], keyString, data)
 		results <- msg
 	}
+
+	// IF SUCCESSFUL:
+	return keyString
+
+	//IF UNSUCCESSFUL:
+	// return "0" maybe
 
 }
 
@@ -400,7 +406,7 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts 
 func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, alreadySeenContacts map[string]bool, hash string) ([]Contact, string, map[string]bool, error) {
 	fmt.Println("contacts", contacts)
 	fmt.Println("alreadseen", alreadySeenContacts)
-	fmt.Println("target", target)
+	//fmt.Println("target", target)
 
 	// Create channels to receive results and errors.
 	results := make(chan []Contact, len(contacts))
@@ -458,7 +464,7 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, alreadySeenC
 		}
 	}
 
-	return newFoundContacts, alreadySeenContacts, nil
+	return newFoundContacts, "", alreadySeenContacts, nil
 }
 
 // Trim list so that the length is k
