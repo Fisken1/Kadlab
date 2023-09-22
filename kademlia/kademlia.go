@@ -156,7 +156,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, string) {
 
 		fmt.Println("len alphaContacts:", len(alphaContacts))
 
-		shortlist, contactedMap, err := kademlia.QueryContacts(alphaContacts, contactedMap, &dataContact)
+		shortlist, _, contactedMap, err := kademlia.QueryContactsForValue(alphaContacts, contactedMap, dataContact.ID.String())
 		if err != nil {
 			fmt.Println("Error in round 1! ", err)
 		}
@@ -166,7 +166,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, string) {
 
 		fmt.Println("round one done! ", err)
 		//Round 2
-		shortlist, contactedMap, err = kademlia.QueryContacts(shortlist, contactedMap, &dataContact)
+		shortlist, finalValue, contactedMap, err = kademlia.QueryContactsForValue(shortlist, contactedMap, dataContact.ID.String())
 		if err != nil {
 			fmt.Println("Error in round 2! ", err)
 		}
