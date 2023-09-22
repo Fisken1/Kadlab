@@ -400,7 +400,7 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts 
 func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, alreadySeenContacts map[string]bool, hash string) ([]Contact, string, map[string]bool, error) {
 	fmt.Println("contacts", contacts)
 	fmt.Println("alreadseen", alreadySeenContacts)
-	fmt.Println("target", target)
+	//fmt.Println("target", target)
 
 	// Create channels to receive results and errors.
 	results := make(chan []Contact, len(contacts))
@@ -458,7 +458,7 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, alreadySeenC
 		}
 	}
 
-	return newFoundContacts, alreadySeenContacts, nil
+	return newFoundContacts, "", alreadySeenContacts, nil
 }
 
 // Trim list so that the length is k
