@@ -48,7 +48,6 @@ func (candidates *ContactCandidates) Append(contacts []Contact) {
 
 // GetContacts returns the first count number of Contacts
 func (candidates *ContactCandidates) GetContacts(count int) []Contact {
-	fmt.Println("\t\tTHESE ARE THE NODES THAT WE RETURN TO FindClosestContacts ", candidates.contacts[:count], "AND THESE ARE ALL THE NODES INSIDE OF candidates.contacts", candidates.contacts)
 	return candidates.contacts[:count]
 }
 
