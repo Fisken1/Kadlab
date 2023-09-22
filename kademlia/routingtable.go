@@ -1,7 +1,5 @@
 package kademlia
 
-import "fmt"
-
 const bucketSize = 20
 
 // RoutingTable definition
@@ -23,7 +21,6 @@ func NewRoutingTable(me Contact) *RoutingTable {
 
 // AddContact add a new contact to the correct Bucket
 func (routingTable *RoutingTable) AddContact(contact Contact) {
-	fmt.Println("we are adding", contact.Address, "to this", routingTable.me.Address)
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 	bucket := routingTable.buckets[bucketIndex]
 	bucket.AddContact(contact)
@@ -38,25 +35,22 @@ func (routingTable *RoutingTable) FindClosestContacts(target *KademliaID, count 
 	candidates.Append(bucket.GetContactAndCalcDistance(target))
 
 	for i := 1; (bucketIndex-i >= 0 || bucketIndex+i < IDLength*8) && candidates.Len() < count; i++ {
-		//fmt.Println("\t\t\tFindClosestContacts: we got into the for loop")
 		if bucketIndex-i >= 0 {
-			//fmt.Println("\t\t\tFindClosestContacts: we got into the first if statement")
 			bucket = routingTable.buckets[bucketIndex-i]
 			candidates.Append(bucket.GetContactAndCalcDistance(target))
 		}
 		if bucketIndex+i < IDLength*8 {
-			//fmt.Println("\t\t\tFindClosestContacts: we got into the 2nd if statement")
 			bucket = routingTable.buckets[bucketIndex+i]
 			candidates.Append(bucket.GetContactAndCalcDistance(target))
 		}
 	}
-	//fmt.Println("\t\t\tFindClosestContacts: we are now sorting:", candidates.contacts)
+
 	candidates.Sort()
 
 	if count > candidates.Len() {
 		count = candidates.Len()
 	}
-	fmt.Println("\t\t\tFindClosestContacts: we are now done and we are returning:", candidates.contacts)
+
 	return candidates.GetContacts(count)
 }
 

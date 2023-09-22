@@ -1,41 +1,31 @@
-package main
+package Kadlab
 
 import (
-	"Kadlab/kademlia"
-	"fmt"
-	"log"
-	"net"
-	"os"
+	d "Kadlab/kademlia"
+	"flag"
 )
 
 func main() {
+	// Define a command-line flag for specifying the node type
+	nodeType := flag.String("node-type", "normal", "Specify 'bootstrap' or 'normal' node type")
+	bootstrap := flag.String("bootstrapIP", "", "enter ip for bootstrap node")
+	flag.Parse()
 
-	fmt.Println("IP: ", GetOutboundIP())
+	var newNode *d.Network
 
-	node, err := kademlia.InitJoin(GetOutboundIP().String(), 5000)
-	if err != nil {
-		os.Exit(0)
+	// Check the value of the nodeType flag
+	switch *nodeType {
+	case "bootstrap":
+		newNode = d.InitBootstrap(7070)
+	case "normal":
+		newNode, _ = d.InitJoin(*bootstrap, 7070) // Define a function for initializing normal nodes
+	default:
+		println("Invalid node type specified.")
+		return
 	}
 
-	go kademlia.Cli(node)
+	// Start listening for incoming connections
+	go d.Listen(newNode.Contact.Address, newNode.Contact.Port)
 
 	select {}
-
-}
-
-func GetOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func(conn net.Conn) {
-		err := conn.Close()
-		if err != nil {
-
-		}
-	}(conn)
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-
-	return localAddr.IP
 }
