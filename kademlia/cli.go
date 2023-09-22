@@ -50,12 +50,38 @@ func CliHandler(input []string, node *Kademlia) string {
 		}
 
 	case "put":
+		inputStrings := input[1:]
+
+		var concatenatedString string
+
+		for _, str := range inputStrings {
+			concatenatedString += str
+		}
+
+		data := []byte(concatenatedString)
+
+		hash := node.Store(data)
+
+		if hash != "0" {
+			answer = hash
+		} else {
+			answer = "Error..."
+		}
 		/*
 		 (a) put: Takes a single argument, the contents of the file you are uploading, and outputs the
 		 hash of the object, if it could be uploaded successfully.
 		*/
 
 	case "get":
+		hash := input[1]
+		_, data := node.LookupData(hash)
+
+		if data != "" {
+			answer = data
+		} else {
+			answer = "Error..."
+		}
+
 		/*
 		 (b) get: Takes a hash as its only argument, and outputs the contents of the object and the
 		 node it was retrieved from, if it could be downloaded successfully.
