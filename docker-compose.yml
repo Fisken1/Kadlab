@@ -8,7 +8,7 @@
 version: "3"
 services:
   kademliaNodes:
-    image: golang:latest # Make sure your Docker image has this name.
+    image: golang:1.16-alpine # Make sure your Docker image has this name.
     stdin_open: true
     tty: true
     deploy:
@@ -30,3 +30,4 @@ services:
 
 networks:
   kademlia_network:
+
