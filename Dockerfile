@@ -12,21 +12,18 @@ FROM golang:1.16-alpine
 #
 # $ docker build . -t kadlab
 
-RUN mkdir /app
-
-# Set the Current Working Directory inside the container
 WORKDIR /app
 
 COPY go.mod .
-
+COPY go.sum .
 RUN go mod download
 
-COPY ./main/main.go ./
-COPY ./kademlia ./
+# Copy the entire project, including the Kademlia code, into the image
+COPY kademlia/*.go ./kademlia/
+COPY main.go .
 
-ADD docker /app
+RUN go build -o main
 
-# Build the Go app
-RUN go build -o /main.go
+EXPOSE 8080
 
-CMD ["/main.go"]
+CMD ["./main"]
