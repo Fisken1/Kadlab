@@ -2,9 +2,7 @@ package kademlia
 
 import (
 	"encoding/hex"
-	"fmt"
 	"math/rand"
-	"time"
 )
 
 // the static number of bytes in a KademliaID
@@ -28,14 +26,10 @@ func NewKademliaID(data string) *KademliaID {
 // NewRandomKademliaID returns a new instance of a random KademliaID,
 // change this to a better version if you like
 func NewRandomKademliaID() *KademliaID {
-	// Seed the random number generator with the current time
-	rand.Seed(time.Now().UnixNano())
-
 	newKademliaID := KademliaID{}
 	for i := 0; i < IDLength; i++ {
 		newKademliaID[i] = uint8(rand.Intn(256))
 	}
-	fmt.Println("\t\t\t\tTHIS IS THE ID THAT WE ASSING TO THE NODE BEING CREATED", &newKademliaID, "this is in string format", newKademliaID.String())
 	return &newKademliaID
 }
 
