@@ -15,7 +15,6 @@ func Cli(kademlia *Kademlia) {
 		text := scanner.Text()
 
 		if len(text) > 0 {
-			fmt.Println("we are in if sats")
 			input := strings.Fields(text)
 			answer := CliHandler(input, kademlia)
 			fmt.Print(answer + "KADEMLIA> ")
@@ -27,13 +26,14 @@ func Cli(kademlia *Kademlia) {
 }
 
 func CliHandler(input []string, node *Kademlia) string {
-	fmt.Println("we are in clihandler")
 	answer := ""
 	switch input[0] {
 
+	//debug
 	case "printADDRESS":
 		fmt.Println(node.RoutingTable.me.Address)
 
+	//debug
 	case "getContact":
 		fmt.Println("getcontact")
 		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
@@ -51,6 +51,7 @@ func CliHandler(input []string, node *Kademlia) string {
 
 	case "put":
 		inputStrings := input[1:]
+		fmt.Println("input strings cli: ", inputStrings)
 
 		var concatenatedString string
 
@@ -58,8 +59,11 @@ func CliHandler(input []string, node *Kademlia) string {
 			concatenatedString += str
 		}
 
+		fmt.Println("input strings cli: ", concatenatedString)
+
 		data := []byte(concatenatedString)
 
+		fmt.Println("trying to store..?")
 		hash := node.Store(data)
 
 		if hash != "0" {
@@ -86,7 +90,9 @@ func CliHandler(input []string, node *Kademlia) string {
 		 (b) get: Takes a hash as its only argument, and outputs the contents of the object and the
 		 node it was retrieved from, if it could be downloaded successfully.
 		*/
-	case "printID": //debug
+
+	//debug
+	case "printID":
 		fmt.Println(node.RoutingTable.me.ID.String())
 
 	case "exit", "q":

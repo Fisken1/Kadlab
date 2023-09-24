@@ -205,8 +205,10 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, string) {
 
 }
 
-func (kademlia *Kademlia) Store(data []byte) {
+func (kademlia *Kademlia) Store(data []byte) string {
+	fmt.Println("we are in store...")
 	keyString := hex.EncodeToString(sha1.New().Sum(data))
+	fmt.Println("keyString: ", keyString)
 	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
 	contacts, err := kademlia.LookupNode(&target)
 	results := make(chan string, kademlia.alpha)
@@ -219,6 +221,27 @@ func (kademlia *Kademlia) Store(data []byte) {
 		msg, _ := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], keyString, data)
 		results <- msg
 	}
+
+	go func() {
+		for result := range results {
+			// Process each result here as needed.
+			fmt.Println("Received result:", result)
+
+			// Check if the result contains "STORE_SUCCESSFUL" or "STORE_FAILED"
+			if strings.Contains(result, "STORE_SUCCESSFUL") {
+				fmt.Println("Store Successful.", result)
+
+			} else if strings.Contains(result, "STORE_FAILED") {
+				// Handle STORE_FAILED result
+				fmt.Println("Store Failed.", result)
+			} else {
+				// Handle other result types
+				fmt.Println("Received an unexpected result:", result)
+			}
+		}
+	}()
+
+	return keyString
 
 }
 
