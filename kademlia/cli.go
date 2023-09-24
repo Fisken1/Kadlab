@@ -27,6 +27,8 @@ func Cli(kademlia *Kademlia) {
 
 func CliHandler(input []string, node *Kademlia) string {
 	answer := ""
+	fmt.Println("input:", input)
+	fmt.Println("input[]: |", input[0], "|")
 	switch input[0] {
 
 	//debug
