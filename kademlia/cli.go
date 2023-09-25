@@ -64,9 +64,11 @@ func CliHandler(input []string, node *Kademlia) string {
 
 		if hash != "0" {
 			answer = hash
+			fmt.Println("Stored")
 		} else {
 			answer = "Error..."
 		}
+
 		/*
 		 (a) put: Takes a single argument, the contents of the file you are uploading, and outputs the
 		 hash of the object, if it could be uploaded successfully.
@@ -74,10 +76,11 @@ func CliHandler(input []string, node *Kademlia) string {
 
 	case "get":
 		hash := input[1]
-		_, data := node.LookupData(hash)
+		contact, data := node.LookupData(hash)
 
-		if data != "" {
-			answer = data
+		if data != nil {
+			fmt.Println("Found data: ", string(data), " from contact: ", contact)
+
 		} else {
 			answer = "Error..."
 		}

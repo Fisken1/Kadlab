@@ -127,18 +127,20 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 			return nil, err
 		}
 		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_VALUE rpc to us")
-
+		fmt.Println("message: ", msg)
+		fmt.Println("SENT KEY: ", msg.Key)
 		if value, exists := network.node.Hashmap[msg.Key]; exists {
 			valueFound := CreateKademliaMessage(
 				"FIND_VALUE_RESPONSE",
-				"",
+				msg.Key,
 				string(value),
 				msg.Receiver,
 				msg.Sender,
-				msg.Target,
+				nil,
 				nil,
 			)
 			theValueToSend, err := json.Marshal(valueFound)
+			fmt.Println("Returning from FIND_VALUE_RESPONSE ")
 			return theValueToSend, err
 		} else {
 			closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
@@ -153,15 +155,44 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 				closestNodes,
 			)
 			msgToSend, err := json.Marshal(find)
+			fmt.Println("Returning from FIND_VALUE_CONTACTS ")
 			//network.node.RoutingTable.AddContact(*msg.Sender)
 			return msgToSend, err
 		}
 
 	case "STORE":
+		err := json.Unmarshal(data, &msg)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(msg.Sender.Address + " <- This node sent a STORE message to us")
+		fmt.Println("GOT A STORE MESSAGE!!!!!!", msg)
+		network.node.handleStoreMessage(msg.Key, []byte(msg.Value))
+		response := CreateKademliaMessage(
+			"STORE_SUCCESSFUL",
+			"",
+			"",
+			msg.Receiver,
+			msg.Sender,
+			nil,
+			nil,
+		)
+		msgToSend, err := json.Marshal(response)
+		return msgToSend, err
+
 	//	HandleStore(msg)
+	case "PONG":
+		fmt.Println("inside Pong case")
+	case "FIND_NODE_RESPONSE":
+		fmt.Println("inside FINDE_NODE_RESPONSE case")
+
+	case "STORE_SUCCESSFUL":
+		fmt.Println("store response")
 	default:
-		network.node.RoutingTable.AddContact(*msg.Sender)
-		fmt.Println("Received unknown message type:", msg.Type)
+		//network.node.RoutingTable.AddContact(*msg.Sender)
+		fmt.Println("Received unknown message typeee:", msg.Type)
+		fmt.Println("Sender: ", msg.Sender)
+		fmt.Println(msg)
 	}
 	return nil, nil
 }
@@ -208,6 +239,7 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
 	fmt.Println("\t\tNOW SENDING FIND_NODE")
+
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
@@ -226,13 +258,13 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 	return msg.Contacts, nil
 }
 
-func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash string) ([]Contact, string, error) {
+func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash string) ([]Contact, []byte, error) {
 	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
 
 	message := CreateKademliaMessage(
 		"FIND_VALUE",
-		"",
 		hash,
+		"",
 		sender,
 		receiver,
 		nil,
@@ -243,23 +275,23 @@ func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash stri
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
-		return nil, "", err
+		return nil, nil, err
 	}
 	var msg KademliaMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		fmt.Println("\t\t\t Error decoding message:", err)
-		return nil, "", err
+		return nil, nil, err
 	}
 	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
 	fmt.Println("\t\t\t msg", msg)
 	switch msg.Type {
 	case "FIND_VALUE_RESPONSE":
-		return nil, msg.Value, nil
+		return msg.Contacts, []byte(msg.Value), nil
 	case "FIND_VALUE_CONTACTS":
-		return msg.Contacts, "", nil
+		return msg.Contacts, nil, nil
 	default:
 		fmt.Println("\t\t\t FIND VALUE GOT A MESSAGE IT DID NOT EXPECT!!!!!!!!!!", msg.Type)
-		return nil, "", nil
+		return nil, nil, nil
 	}
 }
 
@@ -275,7 +307,7 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, key string, 
 		nil,
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	fmt.Println("\t\tNOW SENDING STORE")
+	fmt.Println("\t\tNOW SENDING STORE TO NODE: ", addr)
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
@@ -288,11 +320,12 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, key string, 
 	}
 	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
 	fmt.Println("\t\t\t msg", msg)
+	fmt.Println("\t\t\t Attempting to store")
 	switch msg.Type {
 	case "STORE_SUCCESSFUL":
 		return msg.Sender.Address + " STORE_SUCCESSFUL", nil
 	case "STORE_FAILED":
-		return msg.Sender.Address + " STORE_FAILED", nil
+		return msg.Sender.Address + " STORE_FAILED", err
 	default:
 		fmt.Println("\t\t\t FIND VALUE GOT A MESSAGE IT DID NOT EXPECT!!!!!!!!!!", msg.Type)
 		return "", nil
