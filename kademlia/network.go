@@ -158,12 +158,62 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		}
 
 	case "STORE":
-	//	HandleStore(msg)
+		err := json.Unmarshal(data, &msg)
+		if err != nil {
+			return nil, err
+		}
+
+		// Assuming you have a hashmap in your network.node to store key-value pairs
+		// Replace network.node.Hashmap with the actual hashmap you have
+
+		// Check if the storage operation was successful
+		if err := storeDataInHashmap(network.node, msg.Key, msg.Value); err != nil {
+			// Storage operation failed, send a STORE_FAILED response
+			storeFailed := CreateKademliaMessage(
+				"STORE_FAILED",
+				"",
+				"",
+				msg.Receiver,
+				msg.Sender,
+				nil,
+				nil,
+			)
+			msgToSend, err := json.Marshal(storeFailed)
+			return msgToSend, err
+		}
+
+		// Storage was successful, create a STORE_SUCCESSFUL response
+		storeSuccess := CreateKademliaMessage(
+			"STORE_SUCCESSFUL",
+			"",
+			"",
+			msg.Receiver,
+			msg.Sender,
+			nil,
+			nil,
+		)
+		msgToSend, err := json.Marshal(storeSuccess)
+
+		// Add the sender to the routing table
+		network.node.RoutingTable.AddContact(*msg.Sender)
+
+		return msgToSend, err
+
 	default:
 		network.node.RoutingTable.AddContact(*msg.Sender)
 		fmt.Println("Received unknown message type:", msg.Type)
 	}
 	return nil, nil
+}
+
+func storeDataInHashmap(node *Kademlia, key, value string) error {
+	if _, exists := node.Hashmap[key]; exists {
+		return errors.New("Key already exists in the hashmap")
+	}
+
+	node.Hashmap[key] = []byte(value)
+
+	return nil
 }
 
 func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) error {

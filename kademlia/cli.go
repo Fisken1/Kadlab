@@ -69,13 +69,13 @@ func CliHandler(input []string, node *Kademlia) string {
 		hash := node.Store(data)
 
 		if hash != "0" {
-			answer = hash
+			answer = "Stored with hash: " + hash
 		} else {
 			answer = "Error..."
 		}
 		/*
-		 (a) put: Takes a single argument, the contents of the file you are uploading, and outputs the
-		 hash of the object, if it could be uploaded successfully.
+		   (a) put: Takes a single argument, the contents of the file you are uploading, and outputs the
+		   hash of the object, if it could be uploaded successfully.
 		*/
 
 	case "get":
