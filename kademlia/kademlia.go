@@ -1,6 +1,8 @@
 package kademlia
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strconv"
@@ -128,12 +130,96 @@ func (kademlia *Kademlia) fixNetwork() {
 	}
 }
 
-func (kademlia *Kademlia) LookupData(hash string) {
-	// TODO
+func (kademlia *Kademlia) LookupData(hash string) ([]Contact, string) {
+	dataContact := NewContact(NewKademliaID(hash), "000.000.00.0", 0000)
+
+	//kademlia.LookupNode(&dataContact)
+	// Initialize variables
+	k := kademlia.k
+	contactedMap := make(map[string]bool)
+	var closestNode *Contact = nil //this is only nil the first cycle
+	var newClosestNode *Contact = nil
+	var finalContacts []Contact = nil
+	var finalValue string = ""
+	for {
+		//one cycle is two rounds!!!
+		//Round 1
+
+		if len(finalContacts) >= k {
+			//fmt.Println("finito before:", closestNode.ID.String(), target.ID.String())
+			fmt.Println("finito")
+			break
+		}
+
+		newClosestNode = closestNode
+		alphaContacts := kademlia.getAlphaContacts(&dataContact, kademlia.alpha, contactedMap)
+
+		fmt.Println("len alphaContacts:", len(alphaContacts))
+
+		shortlist, contactedMap, err := kademlia.QueryContacts(alphaContacts, contactedMap, &dataContact)
+		if err != nil {
+			fmt.Println("Error in round 1! ", err)
+		}
+		shortlist = kademlia.getKNodes(shortlist, &dataContact)
+
+		fmt.Println("len shortlist after round one ", len(shortlist))
+
+		fmt.Println("round one done! ", err)
+		//Round 2
+		shortlist, contactedMap, err = kademlia.QueryContacts(shortlist, contactedMap, &dataContact)
+		if err != nil {
+			fmt.Println("Error in round 2! ", err)
+		}
+		if len(shortlist) != 0 {
+			finalContacts = kademlia.getKNodes(shortlist, &dataContact)
+			break
+		}
+
+		fmt.Println("len shortlist after round two ", len(shortlist))
+
+		fmt.Println("round two done! ", err)
+		//cycle is done get closest node
+		if len(finalContacts) != 0 {
+			newClosestNode = kademlia.getClosestNode(*dataContact.ID, finalContacts)
+		}
+
+		fmt.Println("newClosestNode:", newClosestNode)
+		if closestNode != nil {
+			if newClosestNode.ID == closestNode.ID {
+				break
+			}
+		}
+		closestNode = newClosestNode
+
+		fmt.Println("new(again)ClosestNode:", closestNode)
+
+		fmt.Println("it continues...")
+
+	}
+
+	if finalValue == "" {
+		return finalContacts, ""
+	} else {
+		return nil, finalValue
+	}
+
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
-	// TODO
+	keyString := hex.EncodeToString(sha1.New().Sum(data))
+	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
+	contacts, err := kademlia.LookupNode(&target)
+	results := make(chan string, kademlia.alpha)
+	if err != nil {
+		panic(err)
+	}
+	//TODO choose duplicate amount currently alpha duplicates
+
+	for i := 0; i < len(contacts) && i < kademlia.alpha; i++ {
+		msg, _ := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], keyString, data)
+		results <- msg
+	}
+
 }
 
 func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
@@ -309,6 +395,70 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts 
 	}
 
 	return newFoundContacts, alreadySeenContacts, nil
+}
+
+func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, alreadySeenContacts map[string]bool, hash string) ([]Contact, string, map[string]bool, error) {
+	fmt.Println("contacts", contacts)
+	fmt.Println("alreadseen", alreadySeenContacts)
+	//fmt.Println("target", target)
+
+	// Create channels to receive results and errors.
+	results := make(chan []Contact, len(contacts))
+	errors := make(chan error, len(contacts))
+
+	// Iterate through alphaContacts and send FIND_VALUE RPCs in parallel.
+	for _, contact := range contacts {
+		fmt.Println("this is the contact we are looking at now", contact)
+		go func(contact Contact) {
+			// Send a FIND_VALUE RPC to the contact.
+			if alreadySeenContacts[contact.ID.String()] != true {
+				fmt.Println("alreadyseencontacts collision not true")
+				fmt.Println("\t\tWELL DOES THE NODE HAVE A NETWORK???", kademlia.net, " and this is the addr", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
+				foundContacts, value, err := kademlia.net.SendFindDataMessage(&kademlia.RoutingTable.me, &contact, hash)
+				alreadySeenContacts[contact.ID.String()] = true
+				if err != nil {
+
+					// Handle the error
+					fmt.Printf("Error: %v\n", err)
+					return
+				}
+
+				if foundContacts != nil {
+					// Handle the case when foundContacts is not nil
+					fmt.Printf("Found Contacts: %v\n", foundContacts)
+					// You can perform further operations with foundContacts here
+				}
+
+				if value == "" {
+					// Handle the case when value is ""
+					fmt.Printf("Value: %v\n", value)
+				} else {
+					// Handle the case when value has a value
+				}
+
+			}
+		}(contact)
+	}
+
+	// Collect the results from the channels.
+	var newFoundContacts []Contact
+	for i := 0; i < len(contacts); i++ {
+		select {
+		case contacts := <-results:
+			fmt.Println("QueryContacts got a result")
+			// Add the found contacts to the result slice.
+			for _, contact := range contacts {
+				fmt.Println(contact.Address)
+			}
+			newFoundContacts = append(newFoundContacts, contacts...)
+		case err := <-errors:
+			fmt.Println("wow error in QueryContacts")
+			// Handle errors here if needed.
+			fmt.Printf("Error: %v\n", err)
+		}
+	}
+
+	return newFoundContacts, "", alreadySeenContacts, nil
 }
 
 // Trim list so that the length is k
