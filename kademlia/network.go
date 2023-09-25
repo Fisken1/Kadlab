@@ -185,14 +185,17 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		fmt.Println("inside Pong case")
 	case "FIND_NODE_RESPONSE":
 		fmt.Println("inside FINDE_NODE_RESPONSE case")
-
+	case "FIND_VALUE_CONTACTS":
+		fmt.Println("inside FIND_VALUE_CONTACTS case")
+	case "FIND_VALUE_RESPONSE":
+		fmt.Println("inside FIND_VALUE_RESPONSE case")
 	case "STORE_SUCCESSFUL":
-		fmt.Println("store response")
+		fmt.Println("inside store response")
 	default:
 		//network.node.RoutingTable.AddContact(*msg.Sender)
-		fmt.Println("Received unknown message typeee:", msg.Type)
-		fmt.Println("Sender: ", msg.Sender)
-		fmt.Println(msg)
+		fmt.Println("Received unknown message type:", msg.Type)
+		fmt.Println("Message: ", msg)
+
 	}
 	return nil, nil
 }

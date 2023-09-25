@@ -217,9 +217,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, []byte) {
 func (kademlia *Kademlia) Store(data []byte) string {
 	keyString := hex.EncodeToString(sha1.New().Sum(data))
 	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
-	fmt.Println("\t\t\t\t\t\t\t\t\t\t BEFORE LookupNode !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	contacts, err := kademlia.LookupNode(&target)
-	fmt.Println("\t\t\t\t\t\t\t\t\t\t AFTER LookupNode !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	results := make(chan string, kademlia.alpha)
 
 	errors := make(chan error, len(results))
@@ -227,7 +225,6 @@ func (kademlia *Kademlia) Store(data []byte) string {
 		panic(err)
 	}
 	//TODO choose duplicate amount currently alpha duplicates
-	fmt.Println("\t\t\t\t\t\t\t\t\t\t Found NODE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	for i := 0; i < len(contacts) && i < kademlia.alpha; i++ {
 		msg, _ := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], keyString, data)
 		if err != nil {
@@ -399,9 +396,7 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts 
 	for _, contact := range contacts {
 		fmt.Println("this is the contact we are looking at now", contact)
 		go func(contact Contact) {
-			if alreadySeenContacts[contact.ID.String()] == true {
-				foundContacts = append(foundContacts, contact)
-			}
+
 			// Send a FIND_NODE RPC to the contact.
 			fmt.Println("\t\tWELL DOES THE NODE HAVE A NETWORK???", kademlia.net, " and this is the addr", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
 			foundContacts, err := kademlia.net.SendFindContactMessage(&kademlia.RoutingTable.me, &contact, target)
@@ -465,22 +460,20 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, alreadySeenC
 		fmt.Println("this is the contact we are looking at now", contact)
 		go func(contact Contact) {
 			// Send a FIND_VALUE RPC to the contact.
-			if alreadySeenContacts[contact.ID.String()] != true {
-				fmt.Println("alreadyseencontacts collision not true")
-				fmt.Println("\t\tWELL DOES THE NODE HAVE A NETWORK???", kademlia.net, " and this is the addr", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
-				foundContacts, value, err := kademlia.net.SendFindDataMessage(&kademlia.RoutingTable.me, &contact, hash)
-				alreadySeenContacts[contact.ID.String()] = true
-				if err != nil {
 
-					fmt.Printf("Error: %v\n", err)
-					resultChannel <- resultStruct{nil, nil, err}
+			fmt.Println("\t\tWELL DOES THE NODE HAVE A NETWORK???", kademlia.net, " and this is the addr", kademlia.RoutingTable.me.Address+":"+strconv.Itoa(kademlia.RoutingTable.me.Port))
+			foundContacts, value, err := kademlia.net.SendFindDataMessage(&kademlia.RoutingTable.me, &contact, hash)
+			alreadySeenContacts[contact.ID.String()] = true
+			if err != nil {
 
-				} else {
-					resultChannel <- resultStruct{foundContacts, value, err}
-					fmt.Println("Found value at : ", contact.Address)
-				}
+				fmt.Printf("Error: %v\n", err)
+				resultChannel <- resultStruct{nil, nil, err}
 
+			} else {
+				resultChannel <- resultStruct{foundContacts, value, err}
+				fmt.Println("Found value at : ", contact.Address)
 			}
+
 		}(contact)
 	}
 
