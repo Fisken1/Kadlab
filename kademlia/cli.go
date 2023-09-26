@@ -15,11 +15,11 @@ func Cli(kademlia *Kademlia) {
 		text := scanner.Text()
 
 		if len(text) > 0 {
-			fmt.Println("we are in if sats")
+			//fmt.Println("we are in if sats")
 			input := strings.Fields(text)
 			answer := CliHandler(input, kademlia)
 			fmt.Print(answer + "KADEMLIA> ")
-
+			//TODO
 		} else {
 			fmt.Print("KADEMLIA> ")
 		}
@@ -27,7 +27,7 @@ func Cli(kademlia *Kademlia) {
 }
 
 func CliHandler(input []string, node *Kademlia) string {
-	fmt.Println("we are in clihandler")
+	//fmt.Println("we are in clihandler")
 	answer := ""
 	switch input[0] {
 
