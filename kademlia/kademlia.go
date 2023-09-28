@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type Kademlia struct {
 	k                int
 	bootstrap        bool
 	bootstrapContact *Contact
+	mu               sync.Mutex
 }
 
 const (
@@ -139,79 +141,64 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, []byte) {
 	contactedMap := make(map[string]bool)
 	var closestNode *Contact = nil //this is only nil the first cycle
 	var newClosestNode *Contact = nil
-	var finalContacts []Contact = nil
+
+	alphaContacts := kademlia.getAlphaContacts(&dataContact, kademlia.alpha, contactedMap)
+
+	fmt.Println("len alphaContacts:", len(alphaContacts))
+
+	shortlist, value, contactedMap, err := kademlia.QueryContactsForValue(alphaContacts, contactedMap, hash)
+	if err != nil {
+		fmt.Println("Error in round 1! ", err)
+	}
+	if value != nil {
+		return shortlist, value
+	}
+	shortlist = kademlia.getKNodes(shortlist, &dataContact)
+	if allContacted(shortlist, contactedMap) {
+		fmt.Println("All contacts in shortlist contacted returning. Shortlist: ", shortlist)
+
+		return shortlist, nil
+	}
 
 	for {
-		//one cycle is two rounds!!!
-		//Round 1
-
-		if len(finalContacts) >= k {
+		kademlia.mu.Lock()
+		if len(shortlist) >= k {
 			//fmt.Println("finito before:", closestNode.ID.String(), target.ID.String())
 			fmt.Println("finito")
 			break
 		}
 
 		newClosestNode = closestNode
-		alphaContacts := kademlia.getAlphaContacts(&dataContact, kademlia.alpha, contactedMap)
 
-		fmt.Println("len alphaContacts:", len(alphaContacts))
-
-		shortlist, value, contactedMap, err := kademlia.QueryContactsForValue(alphaContacts, contactedMap, hash)
-		if err != nil {
-			fmt.Println("Error in round 1! ", err)
-		}
-		if value != nil {
-			return shortlist, value
-		}
-		shortlist = kademlia.getKNodes(shortlist, &dataContact)
-		if allContacted(shortlist, contactedMap) {
-			fmt.Println("All contacts in shortlist contacted returning. Shortlist: ", shortlist)
-
-			return shortlist, nil
-
-		}
-
-		fmt.Println("len shortlist after round one ", len(shortlist))
-
-		fmt.Println("round one done! ", err)
 		//Round 2
 		shortlist, contactedMap, err = kademlia.QueryContacts(shortlist, contactedMap, &dataContact)
 		if err != nil {
 			fmt.Println("Error in round 2! ", err)
 		}
 		if len(shortlist) != 0 {
-			finalContacts = kademlia.getKNodes(shortlist, &dataContact)
+			shortlist = kademlia.getKNodes(shortlist, &dataContact)
 			break
 		}
 
-		fmt.Println("len shortlist after round two ", len(shortlist))
-
-		fmt.Println("round two done! ", err)
 		//cycle is done get closest node
-		if len(finalContacts) != 0 {
-			newClosestNode = kademlia.getClosestNode(*dataContact.ID, finalContacts)
+		if len(shortlist) != 0 {
+			newClosestNode = kademlia.getClosestNode(*dataContact.ID, shortlist)
 		}
 
-		fmt.Println("newClosestNode:", newClosestNode)
 		if closestNode != nil {
 			if newClosestNode.ID == closestNode.ID {
 				break
 			}
 		}
 		closestNode = newClosestNode
-
-		fmt.Println("new(again)ClosestNode:", closestNode)
-
-		fmt.Println("it continues...")
-
+		kademlia.mu.Unlock()
 	}
 
-	if finalContacts != nil {
-		return finalContacts, nil
+	if shortlist != nil {
+		return shortlist, nil
+	} else {
+		return nil, nil
 	}
-	fmt.Println("Outside LookupData")
-	return nil, nil
-
 }
 
 func (kademlia *Kademlia) Store(data []byte) string {
@@ -258,69 +245,59 @@ func (kademlia *Kademlia) LookupNode(target *Contact) ([]Contact, error) {
 	var closestNode *Contact = nil //this is only nil the first cycle
 	var newClosestNode *Contact = nil
 	var finalResult []Contact = nil
+
+	//var shortlist := []
+
+	alphaContacts := kademlia.getAlphaContacts(target, kademlia.alpha, contactedMap)
+
+	fmt.Println("len alphaContacts:", len(alphaContacts))
+
+	shortlist, contactedMap, err := kademlia.QueryContacts(alphaContacts, contactedMap, target)
+	if err != nil {
+	}
+	shortlist = kademlia.getKNodes(shortlist, target)
+	if allContacted(shortlist, contactedMap) {
+		return shortlist, err
+	}
+
 	for {
+		newClosestNode = closestNode
 		//one cycle is two rounds!!!
 		//Round 1
 
-		if len(finalResult) >= k {
+		if len(shortlist) >= k {
 			//fmt.Println("finito before:", closestNode.ID.String(), target.ID.String())
-			fmt.Println("finito")
+			fmt.Println("finito", shortlist)
 			break
 		}
 
-		newClosestNode = closestNode
-		alphaContacts := kademlia.getAlphaContacts(target, kademlia.alpha, contactedMap)
-
-		fmt.Println("len alphaContacts:", len(alphaContacts))
-
-		shortlist, contactedMap, err := kademlia.QueryContacts(alphaContacts, contactedMap, target)
-		if err != nil {
-			fmt.Println("Error in round 1! ", err)
-		}
-		shortlist = kademlia.getKNodes(shortlist, target)
-		if allContacted(shortlist, contactedMap) {
-			fmt.Println("All contacts in shortlist contacted returning. Shortlist: ", shortlist)
-
-			return shortlist, err
-
-		}
-		fmt.Println("len shortlist after round one ", len(shortlist))
-
-		fmt.Println("round one done! ", err)
 		//Round 2
 		shortlist, contactedMap, err = kademlia.QueryContacts(shortlist, contactedMap, target)
 		if err != nil {
 			fmt.Println("Error in round 2! ", err)
 		}
 		if len(shortlist) != 0 {
-			finalResult = kademlia.getKNodes(shortlist, target)
+			shortlist = kademlia.getKNodes(shortlist, target)
 			break
 		}
-
-		fmt.Println("len shortlist after round two ", len(shortlist))
-
-		fmt.Println("round two done! ", err)
 		//cycle is done get closest node
 		if len(finalResult) != 0 {
 			newClosestNode = kademlia.getClosestNode(*target.ID, finalResult)
 		}
 
-		fmt.Println("newClosestNode:", newClosestNode)
 		if closestNode != nil {
 			if newClosestNode.ID == closestNode.ID {
 				break
 			}
 		}
 		closestNode = newClosestNode
-
-		fmt.Println("new(again)ClosestNode:", closestNode)
-
-		fmt.Println("it continues...")
-
 	}
 
-	fmt.Println("finalresult:", len(finalResult))
-	return finalResult, nil
+	if len(shortlist) >= k {
+		return shortlist[:k], nil
+	} else {
+		return shortlist, nil
+	}
 }
 
 func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMap map[string]bool) []Contact {
@@ -405,10 +382,12 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, alreadySeenContacts 
 				fmt.Println("error")
 				resultChannel <- resultStruct{nil, err}
 			} else {
+				kademlia.mu.Lock()
 				alreadySeenContacts[contact.ID.String()] = true
 				fmt.Println("found a contact!")
 				// Send the found contacts to the results channel.
 				kademlia.RoutingTable.AddContact(contact)
+				kademlia.mu.Unlock()
 				resultChannel <- resultStruct{foundContacts, nil}
 			}
 
@@ -535,9 +514,10 @@ func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Conta
 	return contacts[:k]
 }
 func (kademlia *Kademlia) handleStoreMessage(keyString string, data []byte) {
+	kademlia.mu.Lock()
 	fmt.Println("Storing")
 	kademlia.Hashmap[keyString] = data
-
+	kademlia.mu.Unlock()
 }
 func getUniqueNotContacted(contacts []Contact, alreadySeenContacts map[string]bool) []Contact {
 	uniqueList := make(map[string]Contact)
@@ -547,7 +527,6 @@ func getUniqueNotContacted(contacts []Contact, alreadySeenContacts map[string]bo
 		_, contacted := alreadySeenContacts[contact.ID.String()]
 		if !contacted {
 			uniqueList[contact.ID.String()] = contact
-
 		}
 	}
 	for _, c := range uniqueList {
@@ -567,6 +546,5 @@ func allContacted(contacts []Contact, alreadySeenContacts map[string]bool) bool 
 			return false
 		}
 	}
-
 	return b
 }

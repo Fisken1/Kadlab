@@ -18,10 +18,10 @@ func Cli(kademlia *Kademlia) {
 			fmt.Println("we are in if sats")
 			input := strings.Fields(text)
 			answer := CliHandler(input, kademlia)
-			fmt.Print(answer + "KADEMLIA> ")
+			fmt.Print(answer + "\nKADEMLIA> ")
 
 		} else {
-			fmt.Print("KADEMLIA> ")
+			fmt.Print("\nKADEMLIA> ")
 		}
 	}
 }
@@ -80,7 +80,6 @@ func CliHandler(input []string, node *Kademlia) string {
 
 		if data != nil {
 			fmt.Println("Found data: ", string(data), " from contact: ", contact)
-
 		} else {
 			answer = "Error..."
 		}
