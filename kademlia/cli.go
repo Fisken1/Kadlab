@@ -48,7 +48,7 @@ func CliHandler(input []string, node *Kademlia) string {
 			}
 			i++
 		}
-
+		//
 	case "put":
 		inputStrings := input[1:]
 
@@ -76,7 +76,9 @@ func CliHandler(input []string, node *Kademlia) string {
 
 	case "get":
 		hash := input[1]
-		contact, data := node.LookupData(hash)
+
+		//contact, data := node.LookupData(hash)
+		_, contact, data, _ := node.LookupData2(hash)
 
 		if data != nil {
 			fmt.Println("Found data: ", string(data), " from contact: ", contact)

@@ -1,5 +1,10 @@
 package kademlia
 
+import (
+	"fmt"
+	"testing"
+)
+
 /*
 import (
 	"fmt"
@@ -234,3 +239,39 @@ func TestContactLessFalse(t *testing.T) {
 	}
 }
 */
+func TestSort(t *testing.T) {
+	// Create a Kademlia instance for testing.
+	me := NewContact(NewRandomKademliaID(), "127.0.0.1:12345", 12345)
+	kademlia := InitNode(me)
+	var lU lookUpper
+	target := NewContact(NewKademliaID("1111111100000000000000000000000000000000"), "130.240.64.89", 8080)
+
+	contactList := []Contact{
+		NewContact(NewKademliaID("4444444444444444444444444444444444444444"), "130.240.64.89", 8080),
+		NewContact(NewKademliaID("2222222222222222222222222222222222222222"), "130.240.64.25", 8080),
+		NewContact(NewKademliaID("3333333333333333333333333333333333333333"), "130.240.64.26", 8080),
+		NewContact(NewKademliaID("1111111111111111111111111111111111111111"), "130.240.64.27", 8080),
+		NewContact(NewKademliaID("5555555555555555555555555555555555555555"), "130.240.64.28", 8080),
+		NewContact(NewKademliaID("9999999999999999999999999999999999999999"), "130.240.64.29", 8080),
+	}
+	cL := lU.distanceSort(contactList, &target)
+	for _, con := range cL {
+		fmt.Println(con.ID)
+	}
+
+	lU.initLookUp(*kademlia, target, cL)
+	newContact1 := NewContact(NewKademliaID("7777777777777777777777777777777777777777"), "130.240.64.89", 8080)
+	contactList = append(contactList, newContact1)
+	newContact2 := NewContact(NewKademliaID("8888888888888888888888888888888888888888"), "130.240.64.89", 8080)
+	contactList = append(contactList, newContact2)
+	newContact3 := NewContact(NewKademliaID("0000000000000000000000000000000000000000"), "130.240.64.89", 8080)
+	contactList = append(contactList, newContact3)
+
+	fmt.Println("Sorted by closestContact:")
+	contactList = lU.distanceSort(contactList, &target)
+	for _, con := range contactList {
+		fmt.Println(con.ID)
+	}
+	fmt.Println("Sorted by lU:")
+	lU.printList()
+}

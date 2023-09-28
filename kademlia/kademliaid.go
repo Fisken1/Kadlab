@@ -2,7 +2,6 @@ package kademlia
 
 import (
 	"encoding/hex"
-	"fmt"
 	"math/rand"
 	"time"
 )
@@ -35,7 +34,7 @@ func NewRandomKademliaID() *KademliaID {
 	for i := 0; i < IDLength; i++ {
 		newKademliaID[i] = uint8(rand.Intn(256))
 	}
-	fmt.Println("\t\t\t\tTHIS IS THE ID THAT WE ASSING TO THE NODE BEING CREATED", &newKademliaID, "this is in string format", newKademliaID.String())
+	//fmt.Println("\t\t\t\tTHIS IS THE ID THAT WE ASSING TO THE NODE BEING CREATED", &newKademliaID, "this is in string format", newKademliaID.String())
 	return &newKademliaID
 }
 

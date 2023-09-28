@@ -41,7 +41,7 @@ func CreateKademliaMessage(messageType, key, value string, sender, receiver, tar
 func (network *Network) Listen(contact Contact) {
 
 	addr := contact.Address + ":" + strconv.Itoa(contact.Port)
-	fmt.Println(" Kademlia listener is starting on: " + addr)
+	//fmt.Println(" Kademlia listener is starting on: " + addr)
 	listenAdrs, _ := net.ResolveUDPAddr("udp", addr)
 	servr, err := net.ListenUDP("udp", listenAdrs)
 	network.server = servr
@@ -49,7 +49,7 @@ func (network *Network) Listen(contact Contact) {
 		fmt.Println("BIG ERROR! This is the addr it tried to listen to: "+listenAdrs.String(), err)
 		defer servr.Close()
 	}
-	fmt.Println("Listening on: " + listenAdrs.String() + " " + contact.ID.String() + "\n\n")
+	fmt.Println("Listening on: " + listenAdrs.String() + ". Id: " + contact.ID.String() + "\n\n")
 
 	for {
 		buf := make([]byte, 65536)
@@ -108,7 +108,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		}
 		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_NODE rpc to us")
 		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
-		fmt.Println("closest nodes: ", closestNodes)
+		//fmt.Println("closest nodes: ", closestNodes)
 		find := CreateKademliaMessage(
 			"FIND_NODE_RESPONSE",
 			"",
@@ -127,8 +127,8 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 			return nil, err
 		}
 		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_VALUE rpc to us")
-		fmt.Println("message: ", msg)
-		fmt.Println("SENT KEY: ", msg.Key)
+		//fmt.Println("message: ", msg)
+		//fmt.Println("SENT KEY: ", msg.Key)
 		if value, exists := network.node.Hashmap[msg.Key]; exists {
 			valueFound := CreateKademliaMessage(
 				"FIND_VALUE_RESPONSE",
@@ -139,12 +139,13 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 				nil,
 				nil,
 			)
+			fmt.Println("Sending: FIND_VALUE_RESPONSE to: ", msg.Sender)
 			theValueToSend, err := json.Marshal(valueFound)
-			fmt.Println("Returning from FIND_VALUE_RESPONSE ")
+			//fmt.Println("Returning from FIND_VALUE_RESPONSE ")
 			return theValueToSend, err
 		} else {
 			closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
-			fmt.Println("closest nodes: ", closestNodes)
+			//fmt.Println("closest nodes: ", closestNodes)
 			find := CreateKademliaMessage(
 				"FIND_VALUE_CONTACTS",
 				"",
@@ -154,8 +155,9 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 				msg.Target,
 				closestNodes,
 			)
+			fmt.Println("Sending: FIND_VALUE_CONTACTS to: ", msg.Sender)
 			msgToSend, err := json.Marshal(find)
-			fmt.Println("Returning from FIND_VALUE_CONTACTS ")
+			//fmt.Println("Returning from FIND_VALUE_CONTACTS ")
 			//network.node.RoutingTable.AddContact(*msg.Sender)
 			return msgToSend, err
 		}
@@ -230,7 +232,7 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 
 func (network *Network) SendFindContactMessage(sender, receiver, target *Contact) ([]Contact, error) {
 	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
-	fmt.Println("\t\tTarget we are looking for", target.Address+":"+strconv.Itoa(target.Port))
+	//fmt.Println("\t\tTarget we are looking for", target.Address+":"+strconv.Itoa(target.Port))
 	message := CreateKademliaMessage(
 		"FIND_NODE",
 		"",
@@ -241,7 +243,7 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 		[]Contact{},
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	fmt.Println("\t\tNOW SENDING FIND_NODE")
+	//fmt.Println("\t\tNOW SENDING FIND_NODE")
 
 	data, err := network.Send(addr, message)
 	if err != nil {
@@ -253,7 +255,7 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 		fmt.Println("\t\t\t Error decoding message:", err)
 		return nil, err
 	}
-	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
+	//fmt.Println("\t\t\t len of msg", len(msg.Contacts))
 	fmt.Println("\t\t\t msg", msg)
 	for _, contact := range msg.Contacts {
 		fmt.Println("\t\t\tthis is one contact returned from FIND_NODE rpc", contact)
@@ -262,7 +264,7 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 }
 
 func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash string) ([]Contact, []byte, error) {
-	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
+	//fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
 
 	message := CreateKademliaMessage(
 		"FIND_VALUE",
@@ -274,7 +276,7 @@ func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash stri
 		[]Contact{},
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	fmt.Println("\t\tNOW SENDING FIND_VALUE")
+	//fmt.Println("\t\tNOW SENDING FIND_VALUE")
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
@@ -285,7 +287,7 @@ func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash stri
 		fmt.Println("\t\t\t Error decoding message:", err)
 		return nil, nil, err
 	}
-	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
+	//fmt.Println("\t\t\t len of msg", len(msg.Contacts))
 	fmt.Println("\t\t\t msg", msg)
 	switch msg.Type {
 	case "FIND_VALUE_RESPONSE":
@@ -310,7 +312,7 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, key string, 
 		nil,
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	fmt.Println("\t\tNOW SENDING STORE TO NODE: ", addr)
+	//fmt.Println("\t\tNOW SENDING STORE TO NODE: ", addr)
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("FIND_NODE FAILED: %v\n", err)
@@ -321,9 +323,9 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, key string, 
 		fmt.Println("\t\t\t Error decoding message:", err)
 		return "", err
 	}
-	fmt.Println("\t\t\t len of msg", len(msg.Contacts))
+	//fmt.Println("\t\t\t len of msg", len(msg.Contacts))
 	fmt.Println("\t\t\t msg", msg)
-	fmt.Println("\t\t\t Attempting to store")
+	//fmt.Println("\t\t\t Attempting to store")
 	switch msg.Type {
 	case "STORE_SUCCESSFUL":
 		return msg.Sender.Address + " STORE_SUCCESSFUL", nil
@@ -336,7 +338,7 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, key string, 
 }
 
 func (network *Network) Send(addr string, msg KademliaMessage) ([]byte, error) {
-	fmt.Println("we are now sending")
+	//fmt.Println("we are now sending")
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		fmt.Println("Error resolving UDP address:", err)
