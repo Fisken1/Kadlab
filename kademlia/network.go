@@ -41,7 +41,7 @@ func CreateKademliaMessage(messageType, key, value string, sender, receiver, tar
 func (network *Network) Listen(contact Contact) {
 
 	addr := contact.Address + ":" + strconv.Itoa(contact.Port)
-	//fmt.Println(" Kademlia listener is starting on: " + addr)
+
 	listenAdrs, _ := net.ResolveUDPAddr("udp", addr)
 	servr, err := net.ListenUDP("udp", listenAdrs)
 	network.server = servr
@@ -108,7 +108,6 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		}
 		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_NODE rpc to us")
 		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
-		//fmt.Println("closest nodes: ", closestNodes)
 		find := CreateKademliaMessage(
 			"FIND_NODE_RESPONSE",
 			"",
@@ -127,9 +126,8 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 			return nil, err
 		}
 		fmt.Println(msg.Sender.Address + " <- This node sent a FIND_VALUE rpc to us")
-		//fmt.Println("message: ", msg)
-		//fmt.Println("SENT KEY: ", msg.Key)
-		if value, exists := network.node.Hashmap[msg.Key]; exists {
+		value, exists := network.node.Hashmap[msg.Key]
+		if exists {
 			valueFound := CreateKademliaMessage(
 				"FIND_VALUE_RESPONSE",
 				msg.Key,
@@ -168,7 +166,6 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 			return nil, err
 		}
 		fmt.Println(msg.Sender.Address + " <- This node sent a STORE message to us")
-		fmt.Println("GOT A STORE MESSAGE!!!!!!", msg)
 		network.node.handleStoreMessage(msg.Key, []byte(msg.Value))
 		response := CreateKademliaMessage(
 			"STORE_SUCCESSFUL",
@@ -179,20 +176,21 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 			nil,
 			nil,
 		)
+		fmt.Println("Sending: STORE_SUCCESSFUL to: ", msg.Sender)
 		msgToSend, err := json.Marshal(response)
 		return msgToSend, err
 
 	//	HandleStore(msg)
 	case "PONG":
-		fmt.Println("inside Pong case")
+		//fmt.Println("inside Pong case")
 	case "FIND_NODE_RESPONSE":
-		fmt.Println("inside FINDE_NODE_RESPONSE case")
+		//fmt.Println("inside FINDE_NODE_RESPONSE case")
 	case "FIND_VALUE_CONTACTS":
-		fmt.Println("inside FIND_VALUE_CONTACTS case")
+		//fmt.Println("inside FIND_VALUE_CONTACTS case")
 	case "FIND_VALUE_RESPONSE":
-		fmt.Println("inside FIND_VALUE_RESPONSE case")
+		//fmt.Println("inside FIND_VALUE_RESPONSE case")
 	case "STORE_SUCCESSFUL":
-		fmt.Println("inside store response")
+		//fmt.Println("inside store response")
 	default:
 		//network.node.RoutingTable.AddContact(*msg.Sender)
 		fmt.Println("Received unknown message type:", msg.Type)
@@ -232,7 +230,7 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 
 func (network *Network) SendFindContactMessage(sender, receiver, target *Contact) ([]Contact, error) {
 	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
-	//fmt.Println("\t\tTarget we are looking for", target.Address+":"+strconv.Itoa(target.Port))
+
 	message := CreateKademliaMessage(
 		"FIND_NODE",
 		"",
@@ -243,7 +241,6 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 		[]Contact{},
 	)
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	//fmt.Println("\t\tNOW SENDING FIND_NODE")
 
 	data, err := network.Send(addr, message)
 	if err != nil {
@@ -255,7 +252,7 @@ func (network *Network) SendFindContactMessage(sender, receiver, target *Contact
 		fmt.Println("\t\t\t Error decoding message:", err)
 		return nil, err
 	}
-	//fmt.Println("\t\t\t len of msg", len(msg.Contacts))
+
 	fmt.Println("\t\t\t msg", msg)
 	for _, contact := range msg.Contacts {
 		fmt.Println("\t\t\tthis is one contact returned from FIND_NODE rpc", contact)
@@ -291,7 +288,7 @@ func (network *Network) SendFindDataMessage(sender, receiver *Contact, hash stri
 	fmt.Println("\t\t\t msg", msg)
 	switch msg.Type {
 	case "FIND_VALUE_RESPONSE":
-		return msg.Contacts, []byte(msg.Value), nil
+		return []Contact{*msg.Sender}, []byte(msg.Value), nil
 	case "FIND_VALUE_CONTACTS":
 		return msg.Contacts, nil, nil
 	default:

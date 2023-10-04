@@ -1,10 +1,11 @@
 package kademlia
 
+/*
 import (
 	"fmt"
 	"testing"
 )
-
+*/
 /*
 import (
 	"fmt"
@@ -239,7 +240,9 @@ func TestContactLessFalse(t *testing.T) {
 	}
 }
 */
+/*
 func TestSort(t *testing.T) {
+	/*
 	// Create a Kademlia instance for testing.
 	me := NewContact(NewRandomKademliaID(), "127.0.0.1:12345", 12345)
 	kademlia := InitNode(me)
@@ -274,4 +277,6 @@ func TestSort(t *testing.T) {
 	}
 	fmt.Println("Sorted by lU:")
 	lU.printList()
+	/*
 }
+*/

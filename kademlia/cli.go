@@ -15,7 +15,6 @@ func Cli(kademlia *Kademlia) {
 		text := scanner.Text()
 
 		if len(text) > 0 {
-			//fmt.Println("we are in if sats")
 			input := strings.Fields(text)
 			answer := CliHandler(input, kademlia)
 			fmt.Print(answer + "KADEMLIA> ")
@@ -27,7 +26,6 @@ func Cli(kademlia *Kademlia) {
 }
 
 func CliHandler(input []string, node *Kademlia) string {
-	//fmt.Println("we are in clihandler")
 	answer := ""
 	switch input[0] {
 
@@ -78,13 +76,17 @@ func CliHandler(input []string, node *Kademlia) string {
 		hash := input[1]
 
 		//contact, data := node.LookupData(hash)
-		_, contact, data, _ := node.LookupData2(hash)
 
-		if data != nil {
-			fmt.Println("Found data: ", string(data), " from contact: ", contact)
-
-		} else {
+		_, contact, data, err := node.LookupData(hash)
+		if err != nil {
 			answer = "Error..."
+		} else {
+			if data != nil {
+				answer = "Found data: " + string(data) + " from contact: " + contact.ID.String() + ". At adress: " + contact.Address
+
+			} else {
+				answer = "Did not find " + hash + " at any node"
+			}
 		}
 
 		/*
