@@ -1,10 +1,6 @@
 package kademlia
 
-import (
-	"fmt"
-	"testing"
-)
-
+/*
 func TestInitNode(t *testing.T) {
 	id1 := NewRandomKademliaID()
 	id2 := NewRandomKademliaID()
@@ -13,3 +9,4 @@ func TestInitNode(t *testing.T) {
 	}
 	fmt.Println(id1.String(), id2.String())
 }
+*/

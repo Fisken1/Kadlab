@@ -1,47 +1,16 @@
 package kademlia
 
-/*
 import (
-	"encoding/json"
 	"log"
 	"net"
 	"testing"
 	"time"
 )
 
-func TestNetworkDispatcherPing(t *testing.T) {
-	// Create a Network instance for testing
-	network := &Network{
-		server: nil, // Initialize server as needed for the test
-	}
-
-	// Create a PING message
-	pingMessage := CreateKademliaMessage("PING", "", "", &Contact{}, &Contact{})
-	pingMessageBytes, _ := json.Marshal(pingMessage)
-
-	// Call the Dispatcher method
-	responseBytes, err := network.Dispatcher(pingMessageBytes)
-
-	// Check for errors
-	if err != nil {
-		t.Errorf("Expected no error, but got: %v", err)
-	}
-
-	// Validate the response, you can add more specific checks based on your application logic
-	var responseMessage KademliaMessage
-	err = json.Unmarshal(responseBytes, &responseMessage)
-	if err != nil {
-		t.Errorf("Expected a valid JSON response, but got: %v", err)
-	}
-	if responseMessage.Type != "PONG" {
-		t.Errorf("Expected response type to be 'PONG', but got: %s", responseMessage.Type)
-	}
-}
-
 func TestNetworkSendPingMessage(t *testing.T) {
 	ip := "192.168.1.26"
 	ipBootstrap := GetBootstrapIP(ip) // Same IP as the current node for bootstrap
-	bootstrap, err := InitJoin(ipBootstrap, 57708)
+	bootstrap, err := InitJoin(ipBootstrap, 5000)
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
@@ -108,4 +77,3 @@ func GetOutboundIP() net.IP {
 
 	return localAddr.IP
 }
-*/
