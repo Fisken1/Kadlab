@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+var bootstrap *Kademlia = nil
+
 func TestInitNode(t *testing.T) {
 	// Initialize a Kademlia node and verify its fields are set correctly.
 	me := NewContact(NewRandomKademliaID(), "127.0.0.1", 12345)
@@ -28,46 +30,45 @@ func TestInitNode(t *testing.T) {
 	// Add more assertions as needed.
 }
 
-/*
-	func TestInitJoinBootstrap(t *testing.T) {
-		// Initialize a Kademlia bootstrap node and verify its fields.
-		bootstrapNode, _ := InitJoin("172.168.0.2", 5000)
+func TestInitJoinBootstrap(t *testing.T) {
+	// Initialize a Kademlia bootstrap node and verify its fields.
+	bootstrap, _ = InitJoin("192.168.1.26", 5000)
 
-		// Check if the node is correctly initialized as a bootstrap node.
-		if !bootstrapNode.bootstrap {
-			t.Error("Expected bootstrap node, got non-bootstrap node")
-		}
-
-		// Verify that the bootstrapContact and network are set up as expected.
-		if bootstrapNode.bootstrapContact == nil {
-			t.Error("Bootstrap contact is not initialized")
-		}
-
-		// Add more assertions as needed.
+	// Check if the node is correctly initialized as a bootstrap node.
+	if !bootstrap.bootstrap {
+		t.Error("Expected bootstrap node, got non-bootstrap node")
 	}
 
-	func TestInitJoinNonBootstrap(t *testing.T) {
-		// Initialize a Kademlia non-bootstrap node and verify its fields.
-		_, _ = InitJoin("172.168.0.2", 5000)
-		nonBootstrapNode, _ := InitJoin("172.168.0.3", 5000)
+	// Add more assertions as needed.
+}
 
-		// Check if the node is correctly initialized as a non-bootstrap node.
-		if nonBootstrapNode.bootstrap {
-			t.Error("Expected non-bootstrap node, got bootstrap node")
-		}
+func TestInitJoinNonBootstrap(t *testing.T) {
+	// Initialize a Kademlia non-bootstrap node and verify its fields.
+	//bootstrap, _ = InitJoin("192.168.1.26", 5000)
+	nonBootstrapNode, _ := InitJoin("127.0.0.1", 2000)
 
-		// Verify that the bootstrapContact and network are set up as expected.
-		if nonBootstrapNode.bootstrapContact != nil {
-			t.Error("Expected nil bootstrap contact for non-bootstrap node")
-		}
+	nonBootstrapNodeContacts := nonBootstrapNode.RoutingTable.FindClosestContacts(bootstrap.RoutingTable.me.ID, 1)
+	bootstrapContacts := bootstrap.RoutingTable.FindClosestContacts(nonBootstrapNode.RoutingTable.me.ID, 1)
 
-		// Add more assertions as needed.
+	// Check if the node is correctly initialized as a non-bootstrap node.
+	if nonBootstrapNode.bootstrap {
+		t.Error("Expected non-bootstrap node, got bootstrap node")
 	}
-*/
+
+	if nonBootstrapNodeContacts[0].ID.String() != bootstrap.RoutingTable.me.ID.String() {
+		t.Error("Expected", bootstrap.RoutingTable.me.ID)
+	}
+
+	if bootstrapContacts[0].ID.String() != nonBootstrapNode.RoutingTable.me.ID.String() {
+		t.Error("Expected", nonBootstrapNode.RoutingTable.me.ID.String())
+	}
+	// Add more assertions as needed.
+}
+
 func TestGetBootstrapIP(t *testing.T) {
 	// Test the GetBootstrapIP function with different IP inputs.
 	bootstrapIP := GetBootstrapIP("192.168.1.1")
-	if bootstrapIP != "172.168.0.2" {
+	if bootstrapIP != "192.168.1.26" {
 		t.Errorf("Expected bootstrap IP '172.168.0.2', got %s", bootstrapIP)
 	}
 

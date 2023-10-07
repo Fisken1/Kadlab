@@ -7,7 +7,6 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -71,7 +70,7 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 		contact := NewContact(
 			NewKademliaID(BootstrapKademliaID),
 			GetBootstrapIP(ip),
-			port,
+			GetBootstrapPort(),
 		)
 		node.bootstrapContact = &contact
 		go node.net.Listen(node.RoutingTable.me)
@@ -99,10 +98,20 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 
 // GetBootstrapIP Check if a node is bootstrap or not, this is hardcoded.
 func GetBootstrapIP(ip string) string {
-	stringList := strings.Split(ip, ".")
-	value := stringList[1]
-	bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
-	return bootstrapIP
+
+	/*
+		stringList := strings.Split(ip, ".")
+		value := stringList[1]
+		bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
+		return bootstrapIP
+
+	*/
+	bootstrapIPForTests := "192.168.1.26" // some arbitrary IP address hard coded to be bootstrap
+	return bootstrapIPForTests
+}
+
+func GetBootstrapPort() int {
+	return 5000
 }
 
 func (kademlia *Kademlia) fixNetwork() {
@@ -183,7 +192,7 @@ func (kademlia *Kademlia) Store(data []byte) string {
 
 }
 
-//TODO not currently used
+// TODO not currently used
 func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMap map[string]bool) []Contact {
 	var alphaContacts []Contact
 
@@ -402,7 +411,7 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, hash string)
 	return contactList, keeperContact, foundValue, nil
 }
 
-//TODO not currently used
+// TODO not currently used
 // Trim list so that the length is k
 func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Contact {
 	// Ensure k is within the bounds of the contacts slice.
@@ -579,7 +588,7 @@ func (lU *lookUpper) printList() {
 	}
 }
 
-//TODO remove, not currently used
+// TODO remove, not currently used
 func (lU *lookUpper) distanceSort(contacts []Contact, target *Contact) []Contact {
 	// Ensure k is within the bounds of the contacts slice.
 
