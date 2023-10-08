@@ -16,8 +16,12 @@ func main() {
 	if err != nil {
 		os.Exit(0)
 	}
-
-	go kademlia.Cli(node)
+	config := kademlia.CLIConfig{
+		Input:  os.Stdin,
+		Output: os.Stdout,
+		Kad:    node,
+	}
+	go kademlia.Cli(config)
 
 	select {}
 

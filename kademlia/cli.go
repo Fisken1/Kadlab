@@ -3,24 +3,32 @@ package kademlia
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
 
-func Cli(kademlia *Kademlia) {
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("KADEMLIA> ")
+type CLIConfig struct {
+	Input  io.Reader
+	Output io.Writer
+	Kad    *Kademlia
+}
+
+// Cli runs the Kademlia command-line interface.
+func Cli(config CLIConfig) {
+	scanner := bufio.NewScanner(config.Input)
+	fmt.Println("KADEMLIA> ")
 	for {
 		scanner.Scan()
 		text := scanner.Text()
 
 		if len(text) > 0 {
 			input := strings.Fields(text)
-			answer := CliHandler(input, kademlia)
-			fmt.Print(answer + "KADEMLIA> ")
-			//TODO
+			answer := CliHandler(input, config.Kad)
+			config.Output.Write([]byte(answer))
+			fmt.Fprint(config.Output, answer+"KADEMLIA> ")
 		} else {
-			fmt.Print("KADEMLIA> ")
+			fmt.Fprint(config.Output, "KADEMLIA> ")
 		}
 	}
 }
@@ -30,6 +38,7 @@ func CliHandler(input []string, node *Kademlia) string {
 	switch input[0] {
 
 	case "printADDRESS":
+		answer = node.RoutingTable.me.Address
 		fmt.Println(node.RoutingTable.me.Address)
 
 	case "getContact":
@@ -94,6 +103,7 @@ func CliHandler(input []string, node *Kademlia) string {
 		 node it was retrieved from, if it could be downloaded successfully.
 		*/
 	case "printID": //debug
+		answer = node.RoutingTable.me.ID.String()
 		fmt.Println(node.RoutingTable.me.ID.String())
 
 	case "exit", "q":
@@ -101,7 +111,7 @@ func CliHandler(input []string, node *Kademlia) string {
 
 	default:
 		fmt.Println("something in default")
-		return "Operation: >>" + input[0] + "<< not found." + "\n" + Usage()
+		answer = "Operation: >>" + input[0] + "<< not found." + "\n" + Usage()
 	}
 	return answer
 }

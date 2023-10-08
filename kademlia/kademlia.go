@@ -20,6 +20,21 @@ type Kademlia struct {
 	bootstrapContact *Contact
 }
 
+type nodeData struct {
+	contact Contact
+	//distance KademliaID
+	probed bool
+	value  []byte
+}
+type lookUpper struct {
+	nodeList      []nodeData
+	target        Contact
+	kademlia      Kademlia
+	mode          string
+	storedContact Contact
+	foundValue    []byte
+}
+
 const (
 	BootstrapKademliaID = "FFFFFFFF00000000000000000000000000000000"
 )
@@ -148,6 +163,7 @@ func (kademlia *Kademlia) Store(data []byte) string {
 	}
 
 	keyString := hex.EncodeToString(sha1.New().Sum(data))
+	//fmt.Println("\n\n\nLOOK AT THIS PLS", keyString, "\n\n\nhrehrehre")
 	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
 
 	contacts, err := kademlia.LookupNode(&target)
@@ -447,21 +463,6 @@ func getListFromMap(contactMap map[string]Contact) []Contact {
 		contacts = append(contacts, contact)
 	}
 	return contacts
-}
-
-type nodeData struct {
-	contact Contact
-	//distance KademliaID
-	probed bool
-	value  []byte
-}
-type lookUpper struct {
-	nodeList      []nodeData
-	target        Contact
-	kademlia      Kademlia
-	mode          string
-	storedContact Contact
-	foundValue    []byte
 }
 
 func (lU *lookUpper) initLookUp(kademlia Kademlia, target Contact, closestNodes []Contact, mode string) {

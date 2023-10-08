@@ -1,6 +1,7 @@
 package kademlia
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -75,7 +76,34 @@ func TestGetBootstrapIP(t *testing.T) {
 	// Add more test cases for different IP inputs.
 }
 
-//func TestStore(t *testing.T) {
-// Test the Store function by storing data and verifying its presence.
+func TestStore(t *testing.T) {
+	nonBootstrapNode1, _ := InitJoin("127.0.0.1", 2001)
 
-//}
+	// Test the Store function by storing data and verifying its presence.
+	testData := []byte("test data")
+
+	// Run the Store method
+	result := nonBootstrapNode1.Store(testData)
+	fmt.Println(result, " nonBootstrapNode1", nonBootstrapNode1.RoutingTable.me.String())
+	if result == "" {
+		t.Error("Store did not return a valid hash.")
+	}
+}
+
+func TestLookupData(t *testing.T) {
+	nonBootstrapNode1, _ := InitJoin("127.0.0.1", 2004)
+
+	// Run the Store method
+	result, con, _, err := nonBootstrapNode1.LookupData("746573742064617461da39a3ee5e6b4b0d3255bfef95601890afd80709")
+	fmt.Println(result, " nonBootstrapNode1", nonBootstrapNode1.RoutingTable.me.String())
+	if result[0].String() == "" {
+		t.Error("Store did not return a valid hash.")
+	}
+	if con.String() == "" {
+		t.Error("Store did not return a valid hash.")
+	}
+
+	if err != nil {
+		t.Error("Store did not return a valid hash.")
+	}
+}
