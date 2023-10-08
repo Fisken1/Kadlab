@@ -28,6 +28,8 @@ func Cli(kademlia *Kademlia) {
 func CliHandler(input []string, node *Kademlia) string {
 	answer := ""
 	switch input[0] {
+	case "printStorage":
+		node.storagehandler.printStoredData()
 
 	case "printADDRESS":
 		fmt.Println(node.RoutingTable.me.Address)
@@ -61,10 +63,10 @@ func CliHandler(input []string, node *Kademlia) string {
 		hash := node.Store(data)
 
 		if hash != "0" {
-			answer = hash
+			answer = hash + "\n"
 			fmt.Println("Stored")
 		} else {
-			answer = "Error..."
+			answer = "Error..." + "\n"
 		}
 
 		/*
@@ -79,13 +81,13 @@ func CliHandler(input []string, node *Kademlia) string {
 
 		_, contact, data, err := node.LookupData(hash)
 		if err != nil {
-			answer = "Error..."
+			answer = "Error..." + "\n"
 		} else {
-			if data != nil {
-				answer = "Found data: " + string(data) + " from contact: " + contact.ID.String() + ". At adress: " + contact.Address
+			if data.Value != nil {
+				answer = "Found data: " + string(data.Value) + " from contact at addres : " + contact.Address + ". with ID: " + contact.ID.String() + "\n"
 
 			} else {
-				answer = "Did not find " + hash + " at any node"
+				answer = "Did not find " + hash + " at any node" + "\n"
 			}
 		}
 
@@ -93,6 +95,18 @@ func CliHandler(input []string, node *Kademlia) string {
 		 (b) get: Takes a hash as its only argument, and outputs the contents of the object and the
 		 node it was retrieved from, if it could be downloaded successfully.
 		*/
+	case "forget":
+		hash := input[1]
+		msg, b, err := node.ForgetData(hash)
+		if err != nil {
+			answer = "Error..." + "\n"
+		} else {
+			if b {
+				answer = "Successfully forgot data, " + msg + "\n"
+			} else {
+				answer = "Failed to forget data, " + msg + "\n"
+			}
+		}
 	case "printID": //debug
 		fmt.Println(node.RoutingTable.me.ID.String())
 

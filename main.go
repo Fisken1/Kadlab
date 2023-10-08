@@ -18,7 +18,8 @@ func main() {
 	}
 
 	go kademlia.Cli(node)
-
+	go node.TTLRefresher(30)
+	go node.TTLCleaner(10)
 	select {}
 
 }
