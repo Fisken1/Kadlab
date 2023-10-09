@@ -20,6 +20,7 @@ func main() {
 	go kademlia.Cli(node)
 	go node.TTLRefresher(30)
 	go node.TTLCleaner(10)
+	go kademlia.InitHTTPInterface(node, node.RoutingTable)
 	select {}
 
 }

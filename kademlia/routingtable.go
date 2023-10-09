@@ -37,7 +37,7 @@ func (routingTable *RoutingTable) AddContact(contact Contact) {
 
 		//If the contact is not at the front then the first should be contacted
 		if bucket.list.Front().Value.(Contact).ID.String() != contact.ID.String() {
-			println("not at front")
+
 			//err := SendPingMessage(&kademlia.RoutingTable.me, kademlia.bootstrapContact) could send ping however routingtable is not reachable from here
 			//I think we should use remove in list (function exist but is never used) or write over.
 		}
@@ -75,6 +75,7 @@ func (routingTable *RoutingTable) FindClosestContacts(target *KademliaID, count 
 		count = candidates.Len()
 	}
 	routingTable.unLock()
+
 	return candidates.GetContacts(count)
 }
 

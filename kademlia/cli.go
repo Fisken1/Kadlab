@@ -60,7 +60,7 @@ func CliHandler(input []string, node *Kademlia) string {
 
 		data := []byte(concatenatedString)
 
-		hash := node.Store(data)
+		hash, _ := node.Store(data)
 
 		if hash != "0" {
 			answer = hash + "\n"

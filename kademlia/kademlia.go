@@ -131,7 +131,7 @@ func (kademlia *Kademlia) fixNetwork() {
 	}
 }
 
-func (kademlia *Kademlia) Store(data []byte) string {
+func (kademlia *Kademlia) Store(data []byte) (string, string) {
 	type resultStruct struct {
 		msg string
 		err error
@@ -139,7 +139,7 @@ func (kademlia *Kademlia) Store(data []byte) string {
 
 	keyString := hex.EncodeToString(sha1.New().Sum(data))
 	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
-
+	var storeLocation string
 	contacts, err := kademlia.LookupNode(&target)
 
 	resultsChannel := make(chan resultStruct, int(math.Min(float64((kademlia.alpha)), float64(len(contacts)))))
@@ -160,6 +160,7 @@ func (kademlia *Kademlia) Store(data []byte) string {
 
 			resultsChannel <- resultStruct{"Stored at self", nil}
 			storagedata.Original = false
+			storeLocation = contacts[i].Address
 		} else {
 			msg, err := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], &storagedata)
 			if err != nil {
@@ -169,6 +170,7 @@ func (kademlia *Kademlia) Store(data []byte) string {
 			} else {
 				resultsChannel <- resultStruct{msg, nil}
 				storagedata.Original = false
+				storeLocation = contacts[i].Address
 			}
 		}
 
@@ -186,7 +188,7 @@ func (kademlia *Kademlia) Store(data []byte) string {
 		}
 	}
 
-	return target.ID.String()
+	return target.ID.String(), storeLocation
 
 }
 
