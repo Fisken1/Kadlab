@@ -6,9 +6,9 @@ import (
 
 func TestHTTPClientInputHandler(t *testing.T) {
 
-	//inputString := []string{"POST", "8084", "test12345"}
+	inputString := []string{"POST", "8080", "test1111"}
 	//inputString := []string{"GET", "8084", "hash"}
-	//httpClientInputHandler(inputString)
+	httpClientInputHandler(inputString)
 
 	//httpClient()
 }

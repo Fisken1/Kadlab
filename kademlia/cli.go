@@ -32,7 +32,7 @@ func CliHandler(input []string, node *Kademlia) string {
 		node.storagehandler.printStoredData()
 
 	case "printADDRESS":
-		fmt.Println(node.RoutingTable.me.Address)
+		fmt.Println(node.RoutingTable.me.Address, ", ", node.RoutingTable.me.Port)
 
 	case "getContact":
 		fmt.Println("getcontact")

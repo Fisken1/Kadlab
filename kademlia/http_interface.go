@@ -3,7 +3,6 @@ package kademlia
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -22,48 +21,43 @@ func InitHTTPInterface(kad *Kademlia, rT *RoutingTable) {
 	}
 	httpInterF = &httpIF
 
-	http.HandleFunc("/objects", handlePost)
-	http.HandleFunc("/objects/", handleGet)
-	http.ListenAndServe(":1550", nil)
+	http.HandleFunc("/objects/", handleReq)
+	http.ListenAndServe(":5000", nil)
 }
 
-func handlePost(w http.ResponseWriter, req *http.Request) {
+func handleReq(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		println(req.RemoteAddr)
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
+		println("req.Uri: ", req.RequestURI)
+		s := strings.Split(req.RequestURI, "/objects/")
+		println("hash: ", s[1])
+		b := []byte(s[1])
+		hash, location := httpInterF.kademlia.Store(b)
+		fmt.Println("hash from Store: ", hash, " at location: ", location)
 
-		}
-		hash, location := httpInterF.kademlia.Store(body)
-		resp := ""
 		if hash != "0" {
-			resp = location + "/objects/{" + hash + "}"
+			//resp = location + "/objects/" + hash
 
 			fmt.Println("Stored")
 		} else {
-			resp = "Error, failed to store..."
+			fmt.Println("store failed")
+			//resp = "Error, failed to store..."
+		}
+		jsonResp, err := json.Marshal(hash)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Header().Set("Location", resp)
+		//w.Header().Set("Location", resp)
 
-		w.Write(nil)
+		w.Write(jsonResp)
 	}
-
-}
-func handleGet(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
 		fmt.Println("req: ", req.RequestURI)
 
 		//Trim req.RequestURI so only the sent hash remains
-		resString := strings.ReplaceAll(req.RequestURI, "%7B", " ")
-		resString = strings.ReplaceAll(resString, "%7D", " ")
-		s := strings.Split(resString, " ")
-		if len(s) != 3 {
-			fmt.Println("error in get s: ", s)
-			return
-		}
-		hash := s[1]
+		hash := strings.Split(req.RequestURI, "/objects/")[1]
 
 		fmt.Println("hash: ", hash)
 		response := ""
@@ -72,7 +66,7 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 			fmt.Println(err)
 
 		} else {
-			if data.Value != nil {
+			if &data != nil {
 				response = string(data.Value)
 
 			}
@@ -84,7 +78,6 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 		}
 		w.Write(jsonResp)
 
-		w.Write(nil)
 	}
 
 }

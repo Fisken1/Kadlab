@@ -20,7 +20,7 @@ type StorageData struct {
 
 func (storagehandler *StorageHandler) initStorageHandler() {
 	storagehandler.valueMap = make(map[string]StorageData)
-	storagehandler.defaultTTL = time.Duration(time.Second * 60) //Change if requierd
+	storagehandler.defaultTTL = time.Duration(time.Second * 60000) //Change if requierd
 }
 func (storagehandler *StorageHandler) lock() {
 	storagehandler.mutex.Lock()
@@ -38,7 +38,7 @@ func (storagehandler *StorageHandler) store(storageData StorageData) {
 	storagehandler.unLock()
 }
 
-//returns value if it exist and a boolean depending if the key got a match.
+// returns value if it exist and a boolean depending if the key got a match.
 func (storagehandler *StorageHandler) getValue(key string) (StorageData, bool) {
 	storagehandler.lock()
 	valuestruct, exists := storagehandler.valueMap[key]
