@@ -19,9 +19,11 @@ func httpClient() {
 
 		if len(text) > 0 {
 			input := strings.Fields(text)
+
 			answer := httpClientInputHandler(input)
+
 			fmt.Print(answer + "httpClient> ")
-			//TODO
+			//fmt.Println(input)
 		} else {
 			fmt.Print("httpClient> ")
 		}
@@ -32,25 +34,21 @@ func httpClientInputHandler(input []string) string {
 	switch input[0] {
 	case "POST":
 		fmt.Println("Post")
-		address := "http://" + input[1] + "/objects"
+		address := "http://localhost:" + input[1] + "/objects"
 		fmt.Println("address ", address)
 		inputString := input[2]
 		fmt.Println("inputStrings: ", inputString)
 		body, _ := json.Marshal(inputString)
 
-		//resp, err := http.Post(address, "application/json", bytes.NewBuffer(body))
 		_, err := http.Post(address, "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			panic(err)
 		}
-		//defer resp.Body.Close()
+
 		return ""
 	case "GET":
-		address := "http://" + input[1] + "/objects/{testing12345}}}"
+		address := "http://localhost:" + input[1] + "/objects/{" + input[2] + "}"
 		fmt.Println("address ", address)
-		//body, _ := json.Marshal(inputString)
-
-		//resp, err := http.Post(address, "application/json", bytes.NewBuffer(body))
 		resp, err := http.Get(address)
 		if err != nil {
 			panic(err)

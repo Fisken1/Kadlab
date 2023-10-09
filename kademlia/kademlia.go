@@ -508,6 +508,11 @@ func (kademlia *Kademlia) handleForgetMessage(storageData StorageData) bool {
 	b := kademlia.storagehandler.forgetData(storageData.Key)
 	return b
 }
+
+//Implement logic here and use this method instead of the one in routingtable
+func (kademlia *Kademlia) AddContact(contact Contact) {
+
+}
 func (kademlia *Kademlia) TTLRefresher(seconds int) {
 
 	ticker := time.NewTicker(time.Duration(seconds) * time.Second)
@@ -582,22 +587,6 @@ func (lU *lookUpper) initLookUp(kademlia *Kademlia, target Contact, closestNodes
 	for i := 0; i < len(closestNodes); i++ {
 		lU.insert(closestNodes[i])
 	}
-	/*
-		var nData nodeData
-		var nList = make([]nodeData, len(closestNodes))
-		for i := 0; i < len(closestNodes); i++ {
-			nData = nodeData{closestNodes[i], false, nil}
-			nData.contact.CalcDistance(target.ID)
-			nList[i] = nData
-
-		}
-
-		sort.Slice(nList, func(i, j int) bool {
-			return nList[i].contact.distance.Less(nList[j].contact.distance)
-		})
-		lU.nodeList = nList
-
-	*/
 
 }
 func (lU *lookUpper) startLookup() ([]Contact, Contact, StorageData) {
@@ -703,23 +692,4 @@ func (lU *lookUpper) printList() {
 	for _, node := range lU.nodeList {
 		fmt.Println(node.contact.ID)
 	}
-}
-
-//TODO remove, not currently used
-func (lU *lookUpper) distanceSort(contacts []Contact, target *Contact) []Contact {
-	// Ensure k is within the bounds of the contacts slice.
-
-	// Calculate XOR distances for all contacts.
-	for i := range contacts {
-		contacts[i].CalcDistance(target.ID)
-
-	}
-
-	// Sort the contacts based on their XOR distances.
-	sort.Slice(contacts, func(i, j int) bool {
-		return contacts[i].distance.Less(contacts[j].distance)
-	})
-
-	// Return the first k contacts, which are the closest ones.
-	return contacts
 }
