@@ -116,8 +116,7 @@ func (kademlia *Kademlia) fixNetwork() {
 	if err != nil {
 		return
 	}
-
-	kademlia.RoutingTable.AddContact(*kademlia.bootstrapContact)
+	kademlia.AddContact(*kademlia.bootstrapContact)
 
 	//contacts, err := kademlia.LookupNode(&kademlia.RoutingTable.me)
 	contacts, err := kademlia.LookupNode(&kademlia.RoutingTable.me)
@@ -126,7 +125,8 @@ func (kademlia *Kademlia) fixNetwork() {
 	}
 
 	for _, contact := range contacts {
-		kademlia.RoutingTable.AddContact(contact)
+
+		kademlia.AddContact(contact)
 
 	}
 }
@@ -362,7 +362,7 @@ func (kademlia *Kademlia) QueryContacts(contacts []Contact, target *Contact) ([]
 				resultsChannel <- resultStruct{nil, err}
 			} else {
 
-				kademlia.RoutingTable.AddContact(contact)
+				kademlia.AddContact(contact)
 				resultsChannel <- resultStruct{newContacts, nil}
 			}
 
@@ -511,6 +511,29 @@ func (kademlia *Kademlia) handleForgetMessage(storageData StorageData) bool {
 
 //Implement logic here and use this method instead of the one in routingtable
 func (kademlia *Kademlia) AddContact(contact Contact) {
+	if kademlia.RoutingTable.me.ID.String() != contact.ID.String() {
+		kademlia.RoutingTable.lock()
+		b, c := kademlia.RoutingTable.AddContact(contact)
+		if b != true {
+			fmt.Println("Pinging contact at the front of the bucket ", c.Address)
+			err := kademlia.net.SendPingMessage(&kademlia.RoutingTable.me, &c)
+			if err != nil {
+				//Ping failed we can remove the contact at the front of the bucket
+				fmt.Println("Ping failed we can remove the contact the the front of the bucket")
+				kademlia.RoutingTable.removeContactAtFront(c)
+				kademlia.RoutingTable.AddContact(contact)
+			} else {
+				fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10s %-10s \n", "Got a Pong respons from the contact ", c.Address, " at the front of the bucket. Contact ", contact.Address, " will not be added to the the bucket for ", kademlia.RoutingTable.me.Address, " as bucket is full")
+
+			}
+
+		} else {
+
+		}
+		kademlia.RoutingTable.unLock()
+	} else {
+		fmt.Println("Attempted to add self to bucket")
+	}
 
 }
 func (kademlia *Kademlia) TTLRefresher(seconds int) {

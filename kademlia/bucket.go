@@ -51,6 +51,9 @@ func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
 	}
 	return contacts
 }
+func (bucket *bucket) removeFrontElement() {
+	bucket.list.Remove(bucket.list.Front())
+}
 
 // Len return the size of the bucket
 func (bucket *bucket) Len() int {

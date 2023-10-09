@@ -84,7 +84,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 
 	switch msg.Type {
 	case "PING":
-		network.node.RoutingTable.AddContact(*msg.Sender)
+		network.node.AddContact(*msg.Sender)
 		response := CreateKademliaMessage(
 			"PONG",
 			msg.Receiver,
@@ -95,11 +95,11 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		)
 		fmt.Println("Sending: ", response.Type, " to: ", msg.Sender)
 		msgToSend, err := json.Marshal(response)
-
+		//Dont add the contact responding with pong, i think it will break romoval of inactive nodes -Ivar
 		return msgToSend, err
 
 	case "FIND_NODE":
-		network.node.RoutingTable.AddContact(*msg.Sender)
+		network.node.AddContact(*msg.Sender)
 		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
 		fmt.Println("closestNodes: ", closestNodes)
 		response := CreateKademliaMessage(
@@ -117,7 +117,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 
 		return msgToSend, err
 	case "FIND_VALUE":
-		network.node.RoutingTable.AddContact(*msg.Sender)
+		network.node.AddContact(*msg.Sender)
 		var response KademliaMessage
 		data, exists := network.node.storagehandler.getValue(msg.Data.Key)
 		if exists {
@@ -152,7 +152,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 
 	case "STORE":
 		var response KademliaMessage
-		network.node.RoutingTable.AddContact(*msg.Sender)
+		network.node.AddContact(*msg.Sender)
 		b := network.node.handleStoreMessage(*msg.Data)
 		if b {
 			response = CreateKademliaMessage(
@@ -178,7 +178,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		msgToSend, err := json.Marshal(response)
 		return msgToSend, err
 	case "FORGET":
-		network.node.RoutingTable.AddContact(*msg.Sender)
+		network.node.AddContact(*msg.Sender)
 		b := network.node.handleForgetMessage(*msg.Data)
 		var response KademliaMessage
 		if b {
@@ -244,7 +244,7 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 
 	data, err := network.Send(addr, pingMessage)
 	if err != nil {
-		log.Printf("Ping failed: %v\n", err)
+		log.Printf("Ping faileddd: %v\n", err)
 		return err
 	}
 	var msg KademliaMessage

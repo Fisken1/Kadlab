@@ -26,24 +26,33 @@ func NewRoutingTable(me Contact) *RoutingTable {
 }
 
 // AddContact add a new contact to the correct Bucket
-func (routingTable *RoutingTable) AddContact(contact Contact) {
-	if contact.ID.String() != routingTable.me.ID.String() {
-		routingTable.lock()
-		fmt.Println("we are adding", contact.Address, "to this", routingTable.me.Address)
-		bucketIndex := routingTable.getBucketIndex(contact.ID)
+//Dont use this directly, use kademlia.AddContact(contact Contact) instead.
+func (routingTable *RoutingTable) AddContact(contact Contact) (bool, Contact) {
+	addedToFront := true
+	bucketIndex := routingTable.getBucketIndex(contact.ID)
 
-		bucket := routingTable.buckets[bucketIndex]
-		bucket.AddContact(contact)
+	bucket := routingTable.buckets[bucketIndex]
+	fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10x \n", "Attempting to add ", contact.Address, " to this ", routingTable.me.Address, " at bucketIndex: ", bucketIndex)
+	bucket.AddContact(contact)
+	frontContact := bucket.list.Front().Value.(Contact)
+	//If the contact is not at the front then the first should be contacted
+	if bucket.list.Front().Value.(Contact).ID.String() != contact.ID.String() {
+		fmt.Println()
+		addedToFront = false
+		fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10x %-10s %-10x\n", "Adding failed for ", contact.Address, " to this ", routingTable.me.Address, " at bucketIndex: ", bucketIndex, " Reason: bucket is full. len(bucket): ", bucket.list.Len())
 
-		//If the contact is not at the front then the first should be contacted
-		if bucket.list.Front().Value.(Contact).ID.String() != contact.ID.String() {
-
-			//err := SendPingMessage(&kademlia.RoutingTable.me, kademlia.bootstrapContact) could send ping however routingtable is not reachable from here
-			//I think we should use remove in list (function exist but is never used) or write over.
-		}
-		routingTable.unLock()
+	} else {
+		fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10x %-10s %-10x \n", "Successfully added ", contact.Address, " to this ", routingTable.me.Address, " at bucketIndex: ", bucketIndex, " Length of bucket: ", bucket.list.Len())
 	}
+	return addedToFront, frontContact
 
+}
+
+func (routingTable *RoutingTable) removeContactAtFront(contact Contact) {
+	bucketIndex := routingTable.getBucketIndex(contact.ID)
+
+	bucket := routingTable.buckets[bucketIndex]
+	bucket.removeFrontElement()
 }
 
 // FindClosestContacts finds the count closest Contacts to the target in the RoutingTable

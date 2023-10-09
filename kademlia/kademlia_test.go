@@ -1,18 +1,35 @@
 package kademlia
 
-/*
 import (
-	"fmt"
+	"crypto/sha1"
+	"encoding/hex"
+	"strconv"
 	"testing"
-)
-*/
-/*
-import (
-	"fmt"
-	"testing"
-	"time"
 )
 
+func TestAddContact(t *testing.T) {
+	contacts := generateContact(100)
+	me := contacts[0]
+	kademlia := InitNode(me)
+
+	for i := 1; i < len(contacts); i++ {
+		kademlia.AddContact(contacts[i])
+	}
+}
+func generateContact(amount int) []Contact {
+	var contacts []Contact
+	var contact Contact
+	for i := 0; i <= amount; i++ {
+		b := []byte(strconv.Itoa(i))
+		keyString := hex.EncodeToString(sha1.New().Sum(b))
+		contact = NewContact(NewKademliaID(keyString), strconv.Itoa(i)+".000.00.0", 0000)
+		contacts = append(contacts, contact)
+
+	}
+	return contacts
+}
+
+/*
 func TestInitNode(t *testing.T) {
 	mockContact := Contact{
 		ID:      NewRandomKademliaID(),
@@ -241,6 +258,7 @@ func TestContactLessFalse(t *testing.T) {
 }
 */
 /*
+
 func TestSort(t *testing.T) {
 	/*
 	// Create a Kademlia instance for testing.
