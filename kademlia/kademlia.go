@@ -519,7 +519,7 @@ func (kademlia *Kademlia) AddContact(contact Contact) {
 			err := kademlia.net.SendPingMessage(&kademlia.RoutingTable.me, &c)
 			if err != nil {
 				//Ping failed we can remove the contact at the front of the bucket
-				fmt.Println("Ping failed we can remove the contact the the front of the bucket")
+				fmt.Println("Ping failed for contact", c.Address, " we can remove the contact the the front of the bucket")
 				kademlia.RoutingTable.removeContactAtFront(c)
 				kademlia.RoutingTable.AddContact(contact)
 			} else {
