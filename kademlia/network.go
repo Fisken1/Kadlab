@@ -44,24 +44,19 @@ func (network *Network) Listen(contact Contact) {
 	servr, err := net.ListenUDP("udp", listenAdrs)
 	network.server = servr
 	if err != nil {
-		fmt.Println("BIG ERROR! This is the addr it tried to listen to: "+listenAdrs.String(), err)
+
 		defer servr.Close()
 	}
 	fmt.Println("Listening on: " + listenAdrs.String() + ". Id: " + contact.ID.String() + "\n\n")
 
 	for {
 		buf := make([]byte, 65536)
-		rlen, rem, err := servr.ReadFromUDP(buf)
-		if err != nil {
-			//fmt.Println("Error reading from UDP:", err)
-			continue
-		}
+		rlen, rem, _ := servr.ReadFromUDP(buf)
 
 		// Process the received data by passing it to the Dispatcher function.
 		go func(connection *net.UDPConn) {
 			response, err := network.Dispatcher(buf[:rlen])
 			if err != nil {
-				log.Printf("Failed to handle response message: %v\n", err)
 				return
 			}
 			connection.WriteToUDP(response, rem)

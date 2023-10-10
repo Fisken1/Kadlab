@@ -22,6 +22,9 @@ func TestCliHandler(t *testing.T) {
 	input = []string{"getContact"}
 	outputContacts := CliHandler(input, node)
 
+	input = []string{"Uploaded"}
+	outputUpload := CliHandler(input, node)
+
 	input = []string{"put", "hej"}
 	outputPut := CliHandler(input, node)
 
@@ -37,6 +40,11 @@ func TestCliHandler(t *testing.T) {
 	if outputContacts != node2.RoutingTable.me.ID.String() {
 		t.Errorf("Expected output: %s, got: %s", node2.RoutingTable.me.ID.String(), outputContacts)
 	}
+
+	if outputUpload != "" {
+		t.Errorf("Expected output: %s, got: %s", "", outputUpload)
+	}
+
 	if outputPut != "68656ada39a3ee5e6b4b0d3255bfef95601890af\n" {
 		t.Errorf("Expected output: %s, got: %s", "68656ada39a3ee5e6b4b0d3255bfef95601890af", outputPut)
 	}

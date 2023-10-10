@@ -35,9 +35,16 @@ func Cli(config CLIConfig) {
 
 func CliHandler(input []string, node *Kademlia) string {
 	answer := ""
+
 	switch input[0] {
-	case "printStorage":
-		//node.storagehandler.printStoredData()
+	case "Uploaded":
+		var ToReturn []string
+		uploaded := node.storagehandler.getUploadedData()
+		for _, data := range uploaded {
+			fmt.Println("Uploaded:", data)
+			ToReturn = append(ToReturn, data)
+		}
+		answer = strings.Join(ToReturn, ", ")
 
 	case "getContact":
 		var contactsToReturn []string
