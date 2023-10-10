@@ -28,6 +28,9 @@ func TestCliHandler(t *testing.T) {
 	input = []string{"NOTACOMMAND"}
 	outputDef := CliHandler(input, node)
 
+	input = []string{"forget", "68656ada39a3ee5e6b4b0d3255bfef95601890af"}
+	outputForget := CliHandler(input, node)
+
 	if outputID != node.RoutingTable.me.ID.String() {
 		t.Errorf("Expected output: %s, got: %s", node.RoutingTable.me.ID.String(), outputID)
 	}
@@ -36,6 +39,17 @@ func TestCliHandler(t *testing.T) {
 	}
 	if outputPut != "68656ada39a3ee5e6b4b0d3255bfef95601890af\n" {
 		t.Errorf("Expected output: %s, got: %s", "68656ada39a3ee5e6b4b0d3255bfef95601890af", outputPut)
+	}
+
+	if outputForget != "Successfully forgot data" {
+		t.Errorf("Expected output: %s, got: %s", "Successfully forgot data", outputForget)
+	}
+
+	input = []string{"forget", "68656ada39a3ee5e6b4b0d3255bfef95601890af"}
+	outputForget = CliHandler(input, node)
+
+	if outputForget != "Failed to forget data" {
+		t.Errorf("Expected output: %s, got: %s", "Failed to forget data", outputForget)
 	}
 
 	expectedUsage := "Usage: \n\tput [contents] \n\t\tTakes a single argument, the contents of the file you are uploading, and outputs the\n\t\thash of the object, if it could be uploaded successfully.\n\tget [hash] \n\t\t Takes a hash as its only argument, and outputs the contents of the object and the\n\t\t node it was retrieved from, if it could be downloaded successfully.\n\texit \n\t\t Terminates the node."

@@ -26,7 +26,7 @@ func NewRoutingTable(me Contact) *RoutingTable {
 }
 
 // AddContact add a new contact to the correct Bucket
-//Dont use this directly, use kademlia.AddContact(contact Contact) instead.
+// Dont use this directly, use kademlia.AddContact(contact Contact) instead.
 func (routingTable *RoutingTable) AddContact(contact Contact) (bool, Contact) {
 	addedToFront := true
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
@@ -48,11 +48,12 @@ func (routingTable *RoutingTable) AddContact(contact Contact) (bool, Contact) {
 
 }
 
-func (routingTable *RoutingTable) removeContactAtFront(contact Contact) {
+func (routingTable *RoutingTable) removeContactAtFront(contact Contact) bool {
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 
 	bucket := routingTable.buckets[bucketIndex]
 	bucket.removeFrontElement()
+	return true
 }
 
 // FindClosestContacts finds the count closest Contacts to the target in the RoutingTable

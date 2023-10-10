@@ -37,7 +37,6 @@ func InitNode(me Contact) *Kademlia {
 }
 
 func InitJoin(ip string, port int) (*Kademlia, error) {
-	fmt.Println(GetBootstrapIP(ip))
 	fmt.Println(ip + "." + strconv.Itoa(port))
 	if ip+":"+strconv.Itoa(port) == GetBootstrapIP(ip)+":"+strconv.Itoa(port) {
 		fmt.Println("WE ARE BOOTSTRAP")
@@ -106,7 +105,7 @@ func GetBootstrapIP(ip string) string {
 		return bootstrapIP
 
 	*/
-	bootstrapIPForTests := "130.240.65.81" // some arbitrary IP address hard coded to be bootstrap
+	bootstrapIPForTests := "130.240.109.105" // some arbitrary IP address hard coded to be bootstrap
 	return bootstrapIPForTests
 }
 
@@ -117,7 +116,6 @@ func GetBootstrapPort() int {
 func (kademlia *Kademlia) fixNetwork() {
 
 	if kademlia.bootstrap {
-		fmt.Println("You are the bootstrap node!")
 		return
 	}
 
@@ -153,7 +151,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 	var storeLocation string
 	contacts, err := kademlia.LookupNode(&target)
 
-	resultsChannel := make(chan resultStruct, int(math.Min(float64((kademlia.alpha)), float64(len(contacts)))))
+	resultsChannel := make(chan resultStruct, int(math.Min(float64((kademlia.k)), float64(len(contacts)))))
 	if err != nil {
 		panic(err)
 	}
@@ -162,7 +160,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 		Value:      data,
 		TimeToLive: time.Now().Add(kademlia.storagehandler.defaultTTL)}
 	//TODO choose duplicate amount currently alpha duplicates
-	for i := 0; i < len(contacts) && i < kademlia.alpha; i++ {
+	for i := 0; i < len(contacts) && i < kademlia.k; i++ {
 		if contacts[i].ID.String() == kademlia.RoutingTable.me.ID.String() {
 
 			kademlia.handleStoreMessage(storagedata)
@@ -174,7 +172,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 		} else {
 			msg, err := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], &storagedata)
 			if err != nil {
-				fmt.Println("error during storing")
+
 				// Handle the error and send it to the errors channel.
 				resultsChannel <- resultStruct{"", err}
 			} else {
@@ -185,7 +183,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 		}
 
 	}
-	for i := 0; i < int(math.Min(float64((kademlia.alpha)), float64(len(contacts)))); i++ {
+	for i := 0; i < int(math.Min(float64((kademlia.k)), float64(len(contacts)))); i++ {
 		select {
 
 		case results := <-resultsChannel:
@@ -224,24 +222,6 @@ func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMa
 	}
 
 	return alphaContacts
-}
-func (kademlia *Kademlia) getAlphaContactsMap(contacts map[string]Contact) (map[string]Contact, map[string]Contact) {
-	alphaContacts := make(map[string]Contact)
-	remainingContacts := make(map[string]Contact)
-
-	i := 0
-	for _, contact := range contacts {
-		// Check if the neighbor is not already in queriedContacts.
-		if i < kademlia.alpha {
-			alphaContacts[contact.ID.String()] = contact
-			i++
-		} else {
-			remainingContacts[contact.ID.String()] = contact
-		}
-
-	}
-
-	return alphaContacts, remainingContacts
 }
 
 func (kademlia *Kademlia) getClosestNode(targetID KademliaID, contacts []Contact) *Contact {
@@ -434,30 +414,6 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, hash string)
 	return contactList, keeperContact, foundData, nil
 }
 
-// TODO not currently used
-// Trim list so that the length is k
-func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Contact {
-	// Ensure k is within the bounds of the contacts slice.
-	k := kademlia.k
-	if k <= 0 || k >= len(contacts) {
-
-		return contacts // Return all contacts if k is out of bounds.
-	}
-
-	// Calculate XOR distances for all contacts.
-	for i := range contacts {
-		contacts[i].CalcDistance(target.ID)
-
-	}
-
-	// Sort the contacts based on their XOR distances.
-	sort.Slice(contacts, func(i, j int) bool {
-		return contacts[i].distance.Less(contacts[j].distance)
-	})
-
-	// Return the first k contacts, which are the closest ones.
-	return contacts[:k]
-}
 func (kademlia *Kademlia) handleStoreMessage(storageData StorageData) bool {
 	kademlia.storagehandler.store(storageData)
 	_, b := kademlia.storagehandler.getValue(storageData.Key)
@@ -531,14 +487,6 @@ func getListFromMap(contactMap map[string]Contact) []Contact {
 		contacts = append(contacts, contact)
 	}
 	return contacts
-}
-func (kademlia *Kademlia) printStoredData() {
-	storedData := kademlia.storagehandler.getStoredData()
-	for _, data := range storedData {
-		fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10s \n", "Key: ", data.Key, " Value: ", data.Value, " TTL: ", data.TimeToLive)
-
-	}
-
 }
 
 func (kademlia *Kademlia) ForgetData(hash string) bool {
@@ -656,13 +604,6 @@ func (lU *lookUpper) getAlphaForContact(amount int) []Contact {
 
 }
 
-func (lU *lookUpper) getList() []Contact {
-	var contacts []Contact
-	for _, node := range lU.nodeList {
-		contacts = append(contacts, node.contact)
-	}
-	return contacts
-}
 func (lU *lookUpper) getNList(length int) []Contact {
 	var contacts []Contact
 	for i := 0; i < length && i < len(lU.nodeList); i++ {
@@ -670,10 +611,4 @@ func (lU *lookUpper) getNList(length int) []Contact {
 		contacts = append(contacts, lU.nodeList[i].contact)
 	}
 	return contacts
-}
-
-func (lU *lookUpper) printList() {
-	for _, node := range lU.nodeList {
-		fmt.Println(node.contact.ID)
-	}
 }
