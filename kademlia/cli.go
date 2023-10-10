@@ -3,24 +3,32 @@ package kademlia
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
 
-func Cli(kademlia *Kademlia) {
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("KADEMLIA> ")
+type CLIConfig struct {
+	Input  io.Reader
+	Output io.Writer
+	Kad    *Kademlia
+}
+
+// Cli runs the Kademlia command-line interface.
+func Cli(config CLIConfig) {
+	scanner := bufio.NewScanner(config.Input)
+	fmt.Println("KADEMLIA> ")
 	for {
 		scanner.Scan()
 		text := scanner.Text()
 
 		if len(text) > 0 {
 			input := strings.Fields(text)
-			answer := CliHandler(input, kademlia)
-			fmt.Print(answer + "KADEMLIA> ")
-			//TODO
+			answer := CliHandler(input, config.Kad)
+			config.Output.Write([]byte(answer))
+			fmt.Fprint(config.Output, answer+"KADEMLIA> ")
 		} else {
-			fmt.Print("KADEMLIA> ")
+			fmt.Fprint(config.Output, "KADEMLIA> ")
 		}
 	}
 }
@@ -31,10 +39,8 @@ func CliHandler(input []string, node *Kademlia) string {
 	case "printStorage":
 		node.storagehandler.printStoredData()
 
-	case "printADDRESS":
-		fmt.Println(node.RoutingTable.me.Address, ", ", node.RoutingTable.me.Port)
-
 	case "getContact":
+		var contactsToReturn []string
 		fmt.Println("getcontact")
 		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
 
@@ -43,11 +49,15 @@ func CliHandler(input []string, node *Kademlia) string {
 				for e := a.list.Front(); e != nil; e = e.Next() {
 					if e.Value != nil {
 						fmt.Println("value in bucket", a, "is", e.Value)
+						contactStr := e.Value.(Contact).ID.String()
+						contactsToReturn = append(contactsToReturn, contactStr)
 					}
 				}
 			}
 			i++
 		}
+		answer = strings.Join(contactsToReturn, ", ")
+		//
 		//
 	case "put":
 		inputStrings := input[1:]
@@ -108,6 +118,7 @@ func CliHandler(input []string, node *Kademlia) string {
 			}
 		}
 	case "printID": //debug
+		answer = node.RoutingTable.me.ID.String()
 		fmt.Println(node.RoutingTable.me.ID.String())
 
 	case "exit", "q":

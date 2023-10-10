@@ -1,300 +1,130 @@
 package kademlia
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"strconv"
+	"fmt"
+	"strings"
 	"testing"
 )
 
-func TestAddContact(t *testing.T) {
-	contacts := generateContact(100)
-	me := contacts[0]
-	kademlia := InitNode(me)
+var bootstrap *Kademlia = nil
 
-	for i := 1; i < len(contacts); i++ {
-		kademlia.AddContact(contacts[i])
-	}
-}
-func generateContact(amount int) []Contact {
-	var contacts []Contact
-	var contact Contact
-	for i := 0; i <= amount; i++ {
-		b := []byte(strconv.Itoa(i))
-		keyString := hex.EncodeToString(sha1.New().Sum(b))
-		contact = NewContact(NewKademliaID(keyString), strconv.Itoa(i)+".000.00.0", 0000)
-		contacts = append(contacts, contact)
-
-	}
-	return contacts
-}
-
-/*
 func TestInitNode(t *testing.T) {
-	mockContact := Contact{
-		ID:      NewRandomKademliaID(),
-		Address: "127.0.0.1:12345",
-	}
+	// Initialize a Kademlia node and verify its fields are set correctly.
+	me := NewContact(NewRandomKademliaID(), "127.0.0.1", 12345)
+	node := InitNode(me)
 
-	node := InitNode(mockContact)
-
-	if node == nil {
-		t.Error("InitNode should return a non-nil node")
-	}
-
+	// Check if the RoutingTable, Hashmap, and other fields are correctly initialized.
 	if node.RoutingTable == nil {
-		t.Error("RoutingTable should be initialized")
+		t.Error("RoutingTable is not initialized")
 	}
 
-	if node.Hashmap == nil {
-		t.Error("Hashmap should be initialized")
+	if node.storagehandler == nil {
+		t.Error("Hashmap is not initialized")
 	}
 
 	if node.alpha != 3 {
-		t.Errorf("Expected alpha to be 3, but got %d", node.alpha)
+		t.Errorf("Expected alpha to be 3, got %d", node.alpha)
 	}
 
-	if node.net == nil {
-		t.Error("net field should be set")
+	if node.k != 10 {
+		t.Errorf("Expected k to be 4, got %d", node.k)
+	}
+	// Add more assertions as needed.
+}
+
+func TestInitJoinBootstrap(t *testing.T) {
+	// Initialize a Kademlia bootstrap node and verify its fields.
+	bootstrap, _ = InitJoin("130.240.65.81", 5000)
+
+	// Check if the node is correctly initialized as a bootstrap node.
+	if !bootstrap.bootstrap {
+		t.Error("Expected bootstrap node, got non-bootstrap node")
+	}
+
+	// Add more assertions as needed.
+}
+
+func TestInitJoinNonBootstrap(t *testing.T) {
+	// Initialize a Kademlia non-bootstrap node and verify its fields.
+	//bootstrap, _ = InitJoin("192.168.1.26", 5000)
+	nonBootstrapNode, _ := InitJoin("127.0.0.1", 2000)
+
+	nonBootstrapNodeContacts := nonBootstrapNode.RoutingTable.FindClosestContacts(bootstrap.RoutingTable.me.ID, 1)
+	bootstrapContacts := bootstrap.RoutingTable.FindClosestContacts(nonBootstrapNode.RoutingTable.me.ID, 1)
+
+	// Check if the node is correctly initialized as a non-bootstrap node.
+	if nonBootstrapNode.bootstrap {
+		t.Error("Expected non-bootstrap node, got bootstrap node")
+	}
+
+	if nonBootstrapNodeContacts[0].ID.String() != bootstrap.RoutingTable.me.ID.String() {
+		t.Error("Expected", bootstrap.RoutingTable.me.ID)
+	}
+
+	if bootstrapContacts[0].ID.String() != nonBootstrapNode.RoutingTable.me.ID.String() {
+		t.Error("Expected", nonBootstrapNode.RoutingTable.me.ID.String())
 	}
 }
 
-func TestGetAlphaContacts(t *testing.T) {
-	// Create a Kademlia instance for testing.
-	me := NewContact(NewRandomKademliaID(), "127.0.0.1:12345", 12345)
-	kademlia := InitNode(me)
-
-	// Create a list of contacts for testing.
-	contacts := []Contact{
-		NewContact(NewRandomKademliaID(), "127.0.0.1:1111", 1111),
-		NewContact(NewRandomKademliaID(), "127.0.0.1:2222", 2222),
-		NewContact(NewRandomKademliaID(), "127.0.0.1:3333", 3333),
-		NewContact(NewRandomKademliaID(), "127.0.0.1:4444", 4444),
+func TestGetBootstrapIP(t *testing.T) {
+	// Test the GetBootstrapIP function with different IP inputs.
+	bootstrapIP := GetBootstrapIP("130.240.65.81")
+	if bootstrapIP != "130.240.65.81" {
+		t.Errorf("Expected bootstrap IP '130.240.65.81', got %s", bootstrapIP)
 	}
 
-	// Add these contacts to the routing table.
-	for _, contact := range contacts {
-		kademlia.RoutingTable.AddContact(contact)
-	}
+}
 
-	// Call the function to get alpha contacts.
-	alpha := 2
-	alphaContacts := kademlia.getAlphaContacts(&contacts[0], []Contact{}, alpha, make(map[string]bool))
+func TestStore(t *testing.T) {
+	nonBootstrapNode1, _ := InitJoin("127.0.0.1", 2001)
 
-	// Check if the length of alphaContacts is equal to alpha.
-	if len(alphaContacts) != alpha {
-		t.Errorf("Expected %d alpha contacts, but got %d", alpha, len(alphaContacts))
-	}
+	// Test the Store function by storing data and verifying its presence.
+	testData := []byte("test data")
 
-	// Check if the selected alpha contacts are in the list of available contacts.
-	for _, contact := range alphaContacts {
-		found := false
-		for _, c := range contacts {
-			if contact.ID.Equals(c.ID) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("Selected contact is not in the list of available contacts")
-		}
+	// Run the Store method
+	result, _ := nonBootstrapNode1.Store(testData)
+	fmt.Println(result, " nonBootstrapNode1", nonBootstrapNode1.RoutingTable.me.String())
+	if result == "" {
+		t.Error("Store did not return a valid hash.")
 	}
 }
 
-func TestInitJoinAsBootstrapNode(t *testing.T) {
-	ip := "192.168.1.25"
-	bootstrap, err := InitJoin(ip, 57707)
+func TestLookupData(t *testing.T) {
+	nonBootstrapNode1, _ := InitJoin("127.0.0.1", 2004)
+
+	// Run the Store method
+	result, con, _, err := nonBootstrapNode1.LookupData("746573742064617461da39a3ee5e6b4b0d3255bfef95601890afd80709")
+	fmt.Println(result, " nonBootstrapNode1", nonBootstrapNode1.RoutingTable.me.String())
+	if result[0].String() == "" {
+		t.Error("Store did not return a valid hash.")
+	}
+	if con.String() == "" {
+		t.Error("Store did not return a valid hash.")
+	}
+
 	if err != nil {
-		t.Errorf("Expected no error, but got: %v", err)
+		t.Error("Store did not return a valid hash.")
 	}
 
-	// Use a channel for synchronization.
-	done := make(chan bool)
+	input := []string{"get", "746573742064617461da39a3ee5e6b4b0d3255bfef95601890afd80709"}
+	outputGet := CliHandler(input, nonBootstrapNode1)
 
-	// Start a goroutine to close the network and signal when done.
-	go func() {
-		// Sleep for a while to allow the network to start.
-		time.Sleep(1 * time.Second)
-		errorro := bootstrap.net.server.Close()
-		if errorro != nil {
-			t.Errorf("Error closing the server: %v", errorro)
-		}
-		done <- true
-	}()
-
-	// Wait for the goroutine to finish before proceeding with other checks.
-	<-done
-
-	if bootstrap == nil {
-		t.Error("InitJoin should return a non-nil node")
-	}
-
-	if bootstrap.RoutingTable == nil {
-		t.Error("RoutingTable should be initialized")
-	}
-
-	if bootstrap.Hashmap == nil {
-		t.Error("Hashmap should be initialized")
-	}
-
-	if bootstrap.alpha != 3 {
-		t.Errorf("Expected alpha to be 3, but got %d", bootstrap.alpha)
-	}
-
-	if bootstrap.net == nil {
-		t.Error("net field should be set")
-	}
-
-}
-
-// TODO FIX THIS TEST ITS BROKEN!!!!
-func TestInitJoinAsRegularNode(t *testing.T) {
-	ip := "192.168.1.26"
-	port := 57707
-	node, err := InitJoin(ip, port)
-	if err != nil {
-		t.Errorf("Expected no error, but got: %v", err)
-	}
-
-	// Use a channel for synchronization.
-	done := make(chan bool)
-
-	// Start a goroutine to close the network and signal when done.
-	go func() {
-		// Sleep for a while to allow the network to start.
-		time.Sleep(1 * time.Second)
-		errorro := node.net.server.Close()
-		if errorro != nil {
-			t.Errorf("Error closing the server: %v", errorro)
-		}
-		done <- true
-	}()
-
-	// Wait for the goroutine to finish before proceeding with other checks.
-	<-done
-
-	if node == nil {
-		t.Error("InitJoin should return a non-nil node")
-	}
-
-	if node.RoutingTable == nil {
-		t.Error("RoutingTable should be initialized")
-	}
-
-	if node.Hashmap == nil {
-		t.Error("Hashmap should be initialized")
-	}
-
-	if node.alpha != 3 {
-		t.Errorf("Expected alpha to be 3, but got %d", node.alpha)
-	}
-
-	if node.net == nil {
-		t.Error("net field should be set")
-	}
-
-}
-
-func TestGetClosestNode(t *testing.T) {
-	// Create a Kademlia instance for testing.
-	kademlia := &Kademlia{
-		RoutingTable: NewRoutingTable(NewContact(NewKademliaID("1111111200000000000000000000000000000000"), "localhost", 8080)),
-		Hashmap:      make(map[string][]byte),
-	}
-
-	// Create a specific target ID.
-	targetID := kademlia.RoutingTable.me.ID
-	q := targetID.String()
-	fmt.Print(q)
-	// Create some queried contacts with known distances.
-	queriedContacts := []Contact{
-		NewContact(NewKademliaID("1212121200000000000000000000000000000000"), "130.240.64.89", 8080),
-		NewContact(NewKademliaID("1111111100000000000000000000000000000000"), "130.240.64.25", 8080),
-		NewContact(NewKademliaID("1111111200000000000000000000000000000000"), "130.240.64.26", 8080),
-		NewContact(NewKademliaID("1111111300000000000000000000000000000000"), "130.240.64.27", 8080),
-		NewContact(NewKademliaID("1111111400000000000000000000000000000000"), "130.240.64.28", 8080),
-		NewContact(NewKademliaID("2111111400000000000000000000000000000000"), "130.240.64.29", 8080),
-	}
-
-	// Calculate the XOR distances for the queried contacts.
-	for i := range queriedContacts {
-		queriedContacts[i].CalcDistance(targetID)
-	}
-
-	correctnode := queriedContacts[2]
-
-	// Get the closest node.
-	closestNode := kademlia.getClosestNode(*targetID, queriedContacts)
-
-	if closestNode == nil {
-		t.Error("Expected closestNode to be non-nil, but got nil")
-	}
-	if closestNode.ID != correctnode.ID {
-		t.Errorf("Expected closestNode ID to be %s, but got %s", queriedContacts[0].ID.String(), closestNode.ID.String())
-	}
-	if closestNode.Address != correctnode.Address {
-		t.Errorf("Expected closestNode Address to be %s, but got %s", queriedContacts[0].Address, closestNode.Address)
-	}
-	if closestNode.Port != correctnode.Port {
-		t.Errorf("Expected closestNode Port to be %d, but got %d", queriedContacts[0].Port, closestNode.Port)
+	if !strings.Contains(outputGet, "Found data") {
+		t.Errorf("Expected output: %s, got: %s", "Found data: test data from contact: e36726ff43292663c457f3c5692130835537a98a. At adress: 127.0.0.1", outputGet)
 	}
 }
-func TestContactLessFalse(t *testing.T) {
-	// Create two Contact instances with the same distance
-	contact1 := &Contact{
-		distance: NewKademliaID("1111111200000000000000000000000000000000"),
-	}
-	contact2 := &Contact{
-		distance: NewKademliaID("1111111200000000000000000000000000000000"),
-	}
 
-	// Compare 'distance' attributes using the Less method
-	result := contact1.Less(contact2)
-
-	// Expect the result to be false
-	if result != false {
-		t.Errorf("Expected contact1.distance to be less than contact2.distance, but got true")
+func TestBucketLen(t *testing.T) {
+	node := &Kademlia{
+		RoutingTable:   NewRoutingTable(NewContact(NewKademliaID(NewRandomKademliaID().String()), "127.0.0.1", 2005)),
+		storagehandler: &StorageHandler{},
+		alpha:          3,
+		k:              10,
+	}
+	node.RoutingTable.buckets[10].AddContact(bootstrap.RoutingTable.me)
+	result := node.RoutingTable.buckets[10].Len()
+	fmt.Println("Len of bucket 1 ", result)
+	if result != 1 {
+		t.Error("Expected 2 nodes in bucket 1 due to prev tests")
 	}
 }
-*/
-/*
-
-func TestSort(t *testing.T) {
-	/*
-	// Create a Kademlia instance for testing.
-	me := NewContact(NewRandomKademliaID(), "127.0.0.1:12345", 12345)
-	kademlia := InitNode(me)
-	var lU lookUpper
-	target := NewContact(NewKademliaID("1111111100000000000000000000000000000000"), "130.240.64.89", 8080)
-
-	contactList := []Contact{
-		NewContact(NewKademliaID("4444444444444444444444444444444444444444"), "130.240.64.89", 8080),
-		NewContact(NewKademliaID("2222222222222222222222222222222222222222"), "130.240.64.25", 8080),
-		NewContact(NewKademliaID("3333333333333333333333333333333333333333"), "130.240.64.26", 8080),
-		NewContact(NewKademliaID("1111111111111111111111111111111111111111"), "130.240.64.27", 8080),
-		NewContact(NewKademliaID("5555555555555555555555555555555555555555"), "130.240.64.28", 8080),
-		NewContact(NewKademliaID("9999999999999999999999999999999999999999"), "130.240.64.29", 8080),
-	}
-	cL := lU.distanceSort(contactList, &target)
-	for _, con := range cL {
-		fmt.Println(con.ID)
-	}
-
-	lU.initLookUp(*kademlia, target, cL)
-	newContact1 := NewContact(NewKademliaID("7777777777777777777777777777777777777777"), "130.240.64.89", 8080)
-	contactList = append(contactList, newContact1)
-	newContact2 := NewContact(NewKademliaID("8888888888888888888888888888888888888888"), "130.240.64.89", 8080)
-	contactList = append(contactList, newContact2)
-	newContact3 := NewContact(NewKademliaID("0000000000000000000000000000000000000000"), "130.240.64.89", 8080)
-	contactList = append(contactList, newContact3)
-
-	fmt.Println("Sorted by closestContact:")
-	contactList = lU.distanceSort(contactList, &target)
-	for _, con := range contactList {
-		fmt.Println(con.ID)
-	}
-	fmt.Println("Sorted by lU:")
-	lU.printList()
-	/*
-}
-*/

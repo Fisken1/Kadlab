@@ -7,7 +7,6 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -99,10 +98,15 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 
 // GetBootstrapIP Check if a node is bootstrap or not, this is hardcoded.
 func GetBootstrapIP(ip string) string {
-	stringList := strings.Split(ip, ".")
-	value := stringList[1]
-	bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
-	return bootstrapIP
+	/*
+		stringList := strings.Split(ip, ".")
+		value := stringList[1]
+		bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
+		return bootstrapIP
+
+	*/
+
+	return "130.240.65.81"
 }
 
 func (kademlia *Kademlia) fixNetwork() {
@@ -223,7 +227,7 @@ func (kademlia *Kademlia) ForgetData(hash string) (string, bool, error) {
 
 }
 
-//TODO not currently used
+// TODO not currently used
 func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMap map[string]bool) []Contact {
 	var alphaContacts []Contact
 
@@ -472,7 +476,7 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, hash string)
 	return contactList, keeperContact, foundData, nil
 }
 
-//TODO not currently used
+// TODO not currently used
 // Trim list so that the length is k
 func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Contact {
 	// Ensure k is within the bounds of the contacts slice.
@@ -509,7 +513,7 @@ func (kademlia *Kademlia) handleForgetMessage(storageData StorageData) bool {
 	return b
 }
 
-//Implement logic here and use this method instead of the one in routingtable
+// Implement logic here and use this method instead of the one in routingtable
 func (kademlia *Kademlia) AddContact(contact Contact) {
 	if kademlia.RoutingTable.me.ID.String() != contact.ID.String() {
 		kademlia.RoutingTable.lock()
