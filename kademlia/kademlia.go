@@ -70,7 +70,7 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 		contact := NewContact(
 			NewKademliaID(BootstrapKademliaID),
 			GetBootstrapIP(ip),
-			port,
+			GetBootstrapPort(),
 		)
 		node.bootstrapContact = &contact
 		go node.net.Listen(node.RoutingTable.me)
@@ -98,6 +98,7 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 
 // GetBootstrapIP Check if a node is bootstrap or not, this is hardcoded.
 func GetBootstrapIP(ip string) string {
+
 	/*
 		stringList := strings.Split(ip, ".")
 		value := stringList[1]
@@ -105,7 +106,12 @@ func GetBootstrapIP(ip string) string {
 		return bootstrapIP
 
 	*/
-	return "130.240.65.81"
+	bootstrapIPForTests := "130.240.65.81" // some arbitrary IP address hard coded to be bootstrap
+	return bootstrapIPForTests
+}
+
+func GetBootstrapPort() int {
+	return 5000
 }
 
 func (kademlia *Kademlia) fixNetwork() {
