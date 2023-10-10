@@ -37,7 +37,7 @@ func CliHandler(input []string, node *Kademlia) string {
 	answer := ""
 	switch input[0] {
 	case "printStorage":
-		node.storagehandler.printStoredData()
+		//node.storagehandler.printStoredData()
 
 	case "getContact":
 		var contactsToReturn []string
@@ -107,16 +107,14 @@ func CliHandler(input []string, node *Kademlia) string {
 		*/
 	case "forget":
 		hash := input[1]
-		msg, b, err := node.ForgetData(hash)
-		if err != nil {
-			answer = "Error..." + "\n"
+		b := node.ForgetData(hash)
+
+		if b {
+			answer = "Successfully forgot data"
 		} else {
-			if b {
-				answer = "Successfully forgot data, " + msg + "\n"
-			} else {
-				answer = "Failed to forget data, " + msg + "\n"
-			}
+			answer = "Failed to forget data"
 		}
+
 	case "printID": //debug
 		answer = node.RoutingTable.me.ID.String()
 		fmt.Println(node.RoutingTable.me.ID.String())
