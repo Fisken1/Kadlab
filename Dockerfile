@@ -11,19 +11,21 @@ FROM golang:1.16-alpine
 # "kadlab", which you do by using the following command:
 #
 # $ docker build . -t kadlab
-
 WORKDIR /app
 
-COPY go.mod .
-COPY go.sum .
+COPY go.mod go.sum ./
+
 RUN go mod download
+COPY *.go ./
 
 # Copy the entire project, including the Kademlia code, into the image
 COPY kademlia/*.go ./kademlia/
 COPY main.go .
+RUN go build -o /kadlab
 
-RUN go build -o main
+# Install prerequisites
+RUN apk --no-cache add curl
+
 
 EXPOSE 8080
-
-CMD ["./main"]
+CMD ["/kadlab"]

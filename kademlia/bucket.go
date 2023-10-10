@@ -2,8 +2,6 @@ package kademlia
 
 import (
 	"container/list"
-	"fmt"
-	"strconv"
 )
 
 // bucket definition
@@ -22,7 +20,6 @@ func newBucket() *bucket {
 // AddContact adds the Contact to the front of the bucket
 // or moves it to the front of the bucket if it already existed
 func (bucket *bucket) AddContact(contact Contact) {
-	fmt.Println("\t\tWE ARE IN THIS BUCKET", bucket, "and the ID of the contact is", contact.ID.String(), contact.Address+":"+strconv.Itoa(contact.Port))
 
 	var element *list.Element
 	for e := bucket.list.Front(); e != nil; e = e.Next() {
@@ -35,11 +32,9 @@ func (bucket *bucket) AddContact(contact Contact) {
 
 	if element == nil {
 		if bucket.list.Len() < bucketSize {
-			fmt.Println("\t\tWE ARE ADDING")
 			bucket.list.PushFront(contact)
 		}
 	} else {
-		fmt.Println("\t\tWE ARE MOVING")
 		bucket.list.MoveToFront(element)
 	}
 }
@@ -55,6 +50,9 @@ func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
 		contacts = append(contacts, contact)
 	}
 	return contacts
+}
+func (bucket *bucket) removeFrontElement() {
+	bucket.list.Remove(bucket.list.Front())
 }
 
 // Len return the size of the bucket

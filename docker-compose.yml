@@ -8,12 +8,12 @@
 version: "3"
 services:
   kademliaNodes:
-    image: golang:1.16-alpine # Make sure your Docker image has this name.
+    image: kadlab # Make sure your Docker image has this name.
     stdin_open: true
     tty: true
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 50
       #        resources:
       #           limits:
       #              cpus: "0.1"
@@ -23,11 +23,10 @@ services:
         delay: 5s
         max_attempts: 3
         window: 10s
-    #    ports:
-    #      - "4000:80"
+    #ports:
+    #  - "8080:5000/udp"
     networks:
       - kademlia_network
 
 networks:
   kademlia_network:
-
