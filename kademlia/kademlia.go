@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -98,15 +99,13 @@ func InitJoin(ip string, port int) (*Kademlia, error) {
 // GetBootstrapIP Check if a node is bootstrap or not, this is hardcoded.
 func GetBootstrapIP(ip string) string {
 
-	/*
-		stringList := strings.Split(ip, ".")
-		value := stringList[1]
-		bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
-		return bootstrapIP
+	stringList := strings.Split(ip, ".")
+	value := stringList[1]
+	bootstrapIP := "172." + value + ".0.2" // some arbitrary IP address hard coded to be bootstrap
+	return bootstrapIP
 
-	*/
-	bootstrapIPForTests := "130.240.109.105" // some arbitrary IP address hard coded to be bootstrap
-	return bootstrapIPForTests
+	//bootstrapIPForTests := "130.240.109.105" // some arbitrary IP address hard coded to be bootstrap
+	//return bootstrapIPForTests
 }
 
 func GetBootstrapPort() int {
@@ -460,7 +459,7 @@ func (kademlia *Kademlia) refreshTTL() {
 	dataToRefresh := kademlia.storagehandler.getUploadedData()
 	for _, data := range dataToRefresh {
 		fmt.Println("Refreshing data", data)
-		kademlia.LookupData(data)
+		kademlia.Store([]byte(data))
 
 	}
 
