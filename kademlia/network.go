@@ -177,34 +177,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		fmt.Println("Sending: ", response.Type, " to: ", msg.Sender)
 		msgToSend, err := json.Marshal(response)
 		return msgToSend, err
-	case "FORGET":
-		network.node.AddContact(*msg.Sender)
-		b := network.node.handleForgetMessage(*msg.Data)
-		var response KademliaMessage
-		if b {
-			response = CreateKademliaMessage(
-				"FORGET_SUCCESSFUL",
-				msg.Receiver,
-				msg.Sender,
-				nil,
-				msg.Data,
-				nil,
-			)
-		} else {
-			response = CreateKademliaMessage(
-				"FORGET_FAILED",
-				msg.Receiver,
-				msg.Sender,
-				nil,
-				msg.Data,
-				nil,
-			)
-		}
 
-		fmt.Println("Sending: ", response.Type, " to: ", msg.Sender)
-		msgToSend, err := json.Marshal(response)
-		return msgToSend, err
-	//	HandleStore(msg)
 	case "PONG":
 
 	case "FIND_NODE_RESPONSE":
@@ -332,7 +305,7 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, storageData 
 	)
 
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10t  \n", "This node: ", message.Sender.Address, " is sending a message to: ", message.Receiver.Address, " Of the type: ", message.Type, " Data to be stored: Key: ", storageData.Key, " value: ", storageData.Value, " ttl: ", storageData.TimeToLive, " original: ", storageData.Original)
+	fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s \n", "This node: ", message.Sender.Address, " is sending a message to: ", message.Receiver.Address, " Of the type: ", message.Type, " Data to be stored: Key: ", storageData.Key, " value: ", storageData.Value, " ttl: ", storageData.TimeToLive)
 	data, err := network.Send(addr, message)
 	if err != nil {
 		log.Printf("STORE FAILED: %v\n", err)
