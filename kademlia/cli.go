@@ -28,13 +28,13 @@ func Cli(kademlia *Kademlia) {
 func CliHandler(input []string, node *Kademlia) string {
 	answer := ""
 	switch input[0] {
-	case "printStorage":
-		node.storagehandler.printStoredData()
+	case "storage":
+		node.printStoredData()
 
-	case "printADDRESS":
+	case "address":
 		fmt.Println(node.RoutingTable.me.Address, ", ", node.RoutingTable.me.Port)
 
-	case "getContact":
+	case "contacts":
 		fmt.Println("getcontact")
 		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
 
@@ -49,6 +49,13 @@ func CliHandler(input []string, node *Kademlia) string {
 			i++
 		}
 		//
+	case "uploaded":
+		uploaded := node.storagehandler.getUploadedData()
+		for _, data := range uploaded {
+			fmt.Println("Uploaded: ", data)
+
+		}
+
 	case "put":
 		inputStrings := input[1:]
 
@@ -96,17 +103,15 @@ func CliHandler(input []string, node *Kademlia) string {
 		 node it was retrieved from, if it could be downloaded successfully.
 		*/
 	case "forget":
-		hash := input[1]
-		msg, b, err := node.ForgetData(hash)
-		if err != nil {
-			answer = "Error..." + "\n"
+		key := input[1]
+		b := node.storagehandler.forgetData(key)
+
+		if b {
+			answer = "Successfully forgot data, " + key + "\n"
 		} else {
-			if b {
-				answer = "Successfully forgot data, " + msg + "\n"
-			} else {
-				answer = "Failed to forget data, " + msg + "\n"
-			}
+			answer = "Failed to forget data, " + key + "\n"
 		}
+
 	case "printID": //debug
 		fmt.Println(node.RoutingTable.me.ID.String())
 

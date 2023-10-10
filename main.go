@@ -18,8 +18,8 @@ func main() {
 	}
 
 	go kademlia.Cli(node)
-	go node.TTLRefresher(30)
-	go node.TTLCleaner(10)
+	go node.TTLRefresher(30) //Disabled for now to prevent annoying prints
+	go node.TTLCleaner(10)   //Disabled for now to prevent annoying prints
 	go kademlia.InitHTTPInterface(node, node.RoutingTable)
 	select {}
 

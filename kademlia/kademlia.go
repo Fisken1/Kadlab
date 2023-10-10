@@ -138,7 +138,9 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 	}
 
 	keyString := hex.EncodeToString(sha1.New().Sum(data))
+
 	target := NewContact(NewKademliaID(keyString), "000.000.00.0", 0000)
+	kademlia.storagehandler.setUploader(target.ID.String())
 	var storeLocation string
 	contacts, err := kademlia.LookupNode(&target)
 
@@ -149,8 +151,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 	storagedata := StorageData{
 		Key:        target.ID.String(),
 		Value:      data,
-		TimeToLive: time.Now().Add(kademlia.storagehandler.defaultTTL),
-		Original:   true}
+		TimeToLive: time.Now().Add(kademlia.storagehandler.defaultTTL)}
 	//TODO choose duplicate amount currently alpha duplicates
 	for i := 0; i < len(contacts) && i < kademlia.alpha; i++ {
 		if contacts[i].ID.String() == kademlia.RoutingTable.me.ID.String() {
@@ -159,7 +160,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 			fmt.Println("Stored at Self. storageData: ", storagedata)
 
 			resultsChannel <- resultStruct{"Stored at self", nil}
-			storagedata.Original = false
+
 			storeLocation = contacts[i].Address
 		} else {
 			msg, err := kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contacts[i], &storagedata)
@@ -169,7 +170,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 				resultsChannel <- resultStruct{"", err}
 			} else {
 				resultsChannel <- resultStruct{msg, nil}
-				storagedata.Original = false
+
 				storeLocation = contacts[i].Address
 			}
 		}
@@ -192,38 +193,7 @@ func (kademlia *Kademlia) Store(data []byte) (string, string) {
 
 }
 
-func (kademlia *Kademlia) ForgetData(hash string) (string, bool, error) {
-	var contact Contact
-	var storageData StorageData
-	data, exists := kademlia.storagehandler.getValue(hash)
-	if exists && storageData.Original == true {
-		contact = kademlia.RoutingTable.me
-		storageData = data
-	} else {
-		var lU lookUpper
-		target := NewContact(NewKademliaID(hash), "000.000.00.00", 0000)
-		closestContacts := kademlia.RoutingTable.FindClosestContacts(target.ID, kademlia.alpha)
-		lU.initLookUp(kademlia, target, closestContacts, "FIND_DATA")
-		_, contact, storageData = lU.startLookup()
-	}
-	// Initialize variables
-
-	if storageData.Value != nil {
-		msg, b, err := kademlia.net.SendForgetMessage(&kademlia.RoutingTable.me, &contact, &storageData)
-		if err != nil {
-			return "Error during forget", false, err
-
-		}
-
-		return "Sent Forget to: " + contact.Address + " value: " + string(storageData.Value) + " result: " + msg, b, nil
-
-	} else {
-		return "Found no data for hash: " + hash + " to forget.", false, nil
-	}
-
-}
-
-//TODO not currently used
+// TODO not currently used
 func (kademlia *Kademlia) getAlphaContacts(node *Contact, alpha int, contactedMap map[string]bool) []Contact {
 	var alphaContacts []Contact
 
@@ -323,20 +293,6 @@ func (kademlia *Kademlia) LookupData(hash string) ([]Contact, Contact, StorageDa
 
 }
 
-func (kademlia *Kademlia) LookupOtherNodeData(hash string) ([]Contact, error) {
-
-	//Exist at self
-	// Initialize variables
-	var lU lookUpper
-	target := NewContact(NewKademliaID(hash), "000.000.00.00", 0000)
-	closestContacts := kademlia.RoutingTable.FindClosestContacts(target.ID, kademlia.alpha)
-	lU.initLookUp(kademlia, target, closestContacts, "FIND_DATA")
-	finalResult, _, _ := lU.startLookup()
-	fmt.Println("LookupOtherNodeData RETURNING ", finalResult)
-	return finalResult, nil
-
-}
-
 func (kademlia *Kademlia) QueryContacts(contacts []Contact, target *Contact) ([]Contact, error) {
 
 	type resultStruct struct {
@@ -426,11 +382,8 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, hash string)
 
 					if data.Value != nil {
 						duplicateStorer[newContacts[0].ID.String()] = newContacts[0]
-						if foundData.Original != true {
-
-							keeperContact = newContacts[0]
-							foundData = *data
-						}
+						keeperContact = newContacts[0]
+						foundData = *data
 					}
 
 					/*
@@ -472,7 +425,7 @@ func (kademlia *Kademlia) QueryContactsForValue(contacts []Contact, hash string)
 	return contactList, keeperContact, foundData, nil
 }
 
-//TODO not currently used
+// TODO not currently used
 // Trim list so that the length is k
 func (kademlia *Kademlia) getKNodes(contacts []Contact, target *Contact) []Contact {
 	// Ensure k is within the bounds of the contacts slice.
@@ -503,13 +456,7 @@ func (kademlia *Kademlia) handleStoreMessage(storageData StorageData) bool {
 
 }
 
-func (kademlia *Kademlia) handleForgetMessage(storageData StorageData) bool {
-
-	b := kademlia.storagehandler.forgetData(storageData.Key)
-	return b
-}
-
-//Implement logic here and use this method instead of the one in routingtable
+// Implement logic here and use this method instead of the one in routingtable
 func (kademlia *Kademlia) AddContact(contact Contact) {
 	if kademlia.RoutingTable.me.ID.String() != contact.ID.String() {
 		kademlia.RoutingTable.lock()
@@ -545,20 +492,10 @@ func (kademlia *Kademlia) TTLRefresher(seconds int) {
 	}
 }
 func (kademlia *Kademlia) refreshTTL() {
-	activeData := kademlia.storagehandler.getOriginalData()
-	for _, data := range activeData {
-		data.Original = false
-		contacts, err := kademlia.LookupOtherNodeData(data.Key)
-		if err != nil {
-			fmt.Println("Error during refresh")
-		} else {
-			for _, contact := range contacts {
-				if contact.ID.String() != kademlia.RoutingTable.me.ID.String() {
-					fmt.Println("Refreshing data ", data, " on node with address ", contact.Address)
-					kademlia.net.SendStoreMessage(&kademlia.RoutingTable.me, &contact, &data)
-				}
-			}
-		}
+	dataToRefresh := kademlia.storagehandler.getUploadedData()
+	for _, data := range dataToRefresh {
+		fmt.Println("Refreshing data", data)
+		kademlia.LookupData(data)
 
 	}
 
@@ -573,7 +510,10 @@ func (kademlia *Kademlia) TTLCleaner(seconds int) {
 	}
 }
 func (kademlia *Kademlia) cleanTTL() {
-	kademlia.storagehandler.clearExpiredData()
+	oldData := kademlia.storagehandler.clearExpiredData()
+	for _, data := range oldData {
+		fmt.Println("Removing value with past TTL, key: ", data.Key, " value: ", data.Value)
+	}
 }
 
 func getListFromMap(contactMap map[string]Contact) []Contact {
@@ -582,6 +522,14 @@ func getListFromMap(contactMap map[string]Contact) []Contact {
 		contacts = append(contacts, contact)
 	}
 	return contacts
+}
+func (kademlia *Kademlia) printStoredData() {
+	storedData := kademlia.storagehandler.getStoredData()
+	for _, data := range storedData {
+		fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10s \n", "Key: ", data.Key, " Value: ", data.Value, " TTL: ", data.TimeToLive)
+
+	}
+
 }
 
 type nodeData struct {
