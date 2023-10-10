@@ -9,7 +9,7 @@ type StorageHandler struct {
 	valueMap     map[string]StorageData
 	mutex        sync.RWMutex
 	defaultTTL   time.Duration
-	uploadedData map[string]bool
+	uploadedData map[string]string
 }
 type StorageData struct {
 	Key        string    `json:"Key"`
@@ -19,7 +19,7 @@ type StorageData struct {
 
 func (storagehandler *StorageHandler) initStorageHandler() {
 	storagehandler.valueMap = make(map[string]StorageData)
-	storagehandler.uploadedData = make(map[string]bool)
+	storagehandler.uploadedData = make(map[string]string)
 	storagehandler.defaultTTL = time.Duration(time.Second * 60) //Change if requierd
 }
 func (storagehandler *StorageHandler) lock() {
@@ -64,12 +64,24 @@ func (storagehandler *StorageHandler) getUploadedData() []string {
 	storagehandler.lock()
 	uploads := []string{}
 
-	for data, _ := range storagehandler.uploadedData {
+	for _, data := range storagehandler.uploadedData {
 		uploads = append(uploads, data)
 	}
 
 	storagehandler.unLock()
 	return uploads
+}
+
+func (storagehandler *StorageHandler) setTTL(storageData StorageData) bool {
+	storagehandler.lock()
+	valuestruct, exists := storagehandler.valueMap[storageData.Key]
+	if exists {
+		valuestruct.TimeToLive = storageData.TimeToLive
+		storagehandler.valueMap[valuestruct.Key] = valuestruct
+	}
+
+	storagehandler.unLock()
+	return exists
 }
 
 func (storagehandler *StorageHandler) clearExpiredData() []StorageData {
@@ -89,7 +101,7 @@ func (storagehandler *StorageHandler) clearExpiredData() []StorageData {
 
 func (storagehandler *StorageHandler) setUploader(key string) {
 	storagehandler.lock()
-	storagehandler.uploadedData[key] = true
+	storagehandler.uploadedData[key] = key
 	storagehandler.unLock()
 }
 func (storagehandler *StorageHandler) getStoredData() []StorageData {

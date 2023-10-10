@@ -37,7 +37,7 @@ func (routingTable *RoutingTable) AddContact(contact Contact) (bool, Contact) {
 	frontContact := bucket.list.Front().Value.(Contact)
 	//If the contact is not at the front then the first should be contacted
 	if bucket.list.Front().Value.(Contact).ID.String() != contact.ID.String() {
-		fmt.Println()
+		//fmt.Println()
 		addedToFront = false
 		fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10x %-10s %-10x\n", "Adding failed for ", contact.Address, " to this ", routingTable.me.Address, " at bucketIndex: ", bucketIndex, " Reason: bucket is full. len(bucket): ", bucket.list.Len())
 
