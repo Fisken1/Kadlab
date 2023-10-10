@@ -7,6 +7,36 @@ import (
 	"time"
 )
 
+func TestCliHandler(t *testing.T) {
+	// Create a mock Kademlia node for testing
+
+	me := NewContact(NewKademliaID(BootstrapKademliaID), "127.0.0.1", 9000)
+	node := InitNode(me)
+
+	input := []string{"printID"}
+	outputID := CliHandler(input, node)
+
+	me2 := NewContact(NewKademliaID("AAAAAAAA00000000000000000000000000000000"), "127.0.0.1", 9001)
+	node2 := InitNode(me2)
+	node.RoutingTable.buckets[10].AddContact(me2)
+	input = []string{"getContact"}
+	outputContacts := CliHandler(input, node)
+
+	input = []string{"put", "hej"}
+	outputPut := CliHandler(input, node)
+
+	if outputID != node.RoutingTable.me.ID.String() {
+		t.Errorf("Expected output: %s, got: %s", node.RoutingTable.me.ID.String(), outputID)
+	}
+	if outputContacts != node2.RoutingTable.me.ID.String() {
+		t.Errorf("Expected output: %s, got: %s", node2.RoutingTable.me.ID.String(), outputContacts)
+	}
+	if outputPut != "68656ada39a3ee5e6b4b0d3255bfef95601890af" {
+		t.Errorf("Expected output: %s, got: %s", "68656ada39a3ee5e6b4b0d3255bfef95601890af", outputPut)
+	}
+
+}
+
 func TestPrintADDRESS(t *testing.T) {
 	me := NewContact(NewRandomKademliaID(), "127.0.0.1", 9000)
 	node := InitNode(me)

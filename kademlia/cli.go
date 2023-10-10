@@ -42,6 +42,7 @@ func CliHandler(input []string, node *Kademlia) string {
 		fmt.Println(node.RoutingTable.me.Address)
 
 	case "getContact":
+		var contactsToReturn []string
 		fmt.Println("getcontact")
 		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
 
@@ -50,11 +51,14 @@ func CliHandler(input []string, node *Kademlia) string {
 				for e := a.list.Front(); e != nil; e = e.Next() {
 					if e.Value != nil {
 						fmt.Println("value in bucket", a, "is", e.Value)
+						contactStr := e.Value.(Contact).ID.String()
+						contactsToReturn = append(contactsToReturn, contactStr)
 					}
 				}
 			}
 			i++
 		}
+		answer = strings.Join(contactsToReturn, ", ")
 		//
 	case "put":
 		inputStrings := input[1:]

@@ -11,8 +11,10 @@ FROM golang:1.16-alpine
 # "kadlab", which you do by using the following command:
 #
 # $ docker build . -t kadlab
+RUN mkdir /app
+ADD . /app/
+WORKDIR /app/cmd
 
-WORKDIR /app
 
 COPY go.mod .
 COPY go.sum .

@@ -2,6 +2,7 @@ package kademlia
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -33,7 +34,7 @@ func TestInitNode(t *testing.T) {
 
 func TestInitJoinBootstrap(t *testing.T) {
 	// Initialize a Kademlia bootstrap node and verify its fields.
-	bootstrap, _ = InitJoin("192.168.1.26", 5000)
+	bootstrap, _ = InitJoin("130.240.65.81", 5000)
 
 	// Check if the node is correctly initialized as a bootstrap node.
 	if !bootstrap.bootstrap {
@@ -63,17 +64,15 @@ func TestInitJoinNonBootstrap(t *testing.T) {
 	if bootstrapContacts[0].ID.String() != nonBootstrapNode.RoutingTable.me.ID.String() {
 		t.Error("Expected", nonBootstrapNode.RoutingTable.me.ID.String())
 	}
-	// Add more assertions as needed.
 }
 
 func TestGetBootstrapIP(t *testing.T) {
 	// Test the GetBootstrapIP function with different IP inputs.
-	bootstrapIP := GetBootstrapIP("192.168.1.1")
-	if bootstrapIP != "192.168.1.26" {
-		t.Errorf("Expected bootstrap IP '172.168.0.2', got %s", bootstrapIP)
+	bootstrapIP := GetBootstrapIP("130.240.65.81")
+	if bootstrapIP != "130.240.65.81" {
+		t.Errorf("Expected bootstrap IP '130.240.65.81', got %s", bootstrapIP)
 	}
 
-	// Add more test cases for different IP inputs.
 }
 
 func TestStore(t *testing.T) {
@@ -105,5 +104,27 @@ func TestLookupData(t *testing.T) {
 
 	if err != nil {
 		t.Error("Store did not return a valid hash.")
+	}
+
+	input := []string{"get", "746573742064617461da39a3ee5e6b4b0d3255bfef95601890afd80709"}
+	outputGet := CliHandler(input, nonBootstrapNode1)
+
+	if !strings.Contains(outputGet, "Found data") {
+		t.Errorf("Expected output: %s, got: %s", "Found data: test data from contact: e36726ff43292663c457f3c5692130835537a98a. At adress: 127.0.0.1", outputGet)
+	}
+}
+
+func TestBucketLen(t *testing.T) {
+	node := &Kademlia{
+		RoutingTable: NewRoutingTable(NewContact(NewKademliaID(NewRandomKademliaID().String()), "127.0.0.1", 2005)),
+		Hashmap:      make(map[string][]byte),
+		alpha:        3,
+		k:            4,
+	}
+	node.RoutingTable.buckets[10].AddContact(bootstrap.RoutingTable.me)
+	result := node.RoutingTable.buckets[10].Len()
+	fmt.Println("Len of bucket 1 ", result)
+	if result != 1 {
+		t.Error("Expected 2 nodes in bucket 1 due to prev tests")
 	}
 }
