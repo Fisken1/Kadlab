@@ -96,7 +96,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 	case "FIND_NODE":
 		network.node.AddContact(*msg.Sender)
 		closestNodes := network.node.RoutingTable.FindClosestContacts(msg.Receiver.ID, network.node.k)
-		fmt.Println("closestNodes: ", closestNodes)
+		//fmt.Println("closestNodes: ", closestNodes)
 		response := CreateKademliaMessage(
 			"FIND_NODE_RESPONSE",
 			msg.Receiver,
@@ -106,8 +106,8 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 			closestNodes,
 		)
 		fmt.Println("Sending: ", response.Type, " to: ", msg.Sender)
-		fmt.Println("FIND_NODE_RESPONSE: ", response)
-		fmt.Println("Contacts inside resp: ", response.Contacts)
+		//fmt.Println("FIND_NODE_RESPONSE: ", response)
+		//fmt.Println("Contacts inside resp: ", response.Contacts)
 		msgToSend, err := json.Marshal(response)
 
 		return msgToSend, err
@@ -172,7 +172,32 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 		fmt.Println("Sending: ", response.Type, " to: ", msg.Sender)
 		msgToSend, err := json.Marshal(response)
 		return msgToSend, err
+	case "REFRESH":
+		network.node.AddContact(*msg.Sender)
+		var response KademliaMessage
+		b := network.node.handleRefreshMessage(*msg.Data)
 
+		if b {
+			response = CreateKademliaMessage(
+				"REFRESH_SUCCESSFUL",
+				msg.Receiver,
+				msg.Sender,
+				nil,
+				nil,
+				nil,
+			)
+		} else {
+			response = CreateKademliaMessage(
+				"REFRESH_FAILED",
+				msg.Receiver,
+				msg.Sender,
+				nil,
+				nil,
+				nil,
+			)
+		}
+		msgToSend, err := json.Marshal(response)
+		return msgToSend, err
 	case "PONG":
 
 	case "FIND_NODE_RESPONSE":
@@ -189,6 +214,7 @@ func (network *Network) Dispatcher(data []byte) ([]byte, error) {
 
 	case "FORGET_FAILED":
 
+	case "REFRESH_SUCCESSFUL":
 	default:
 
 		fmt.Println("Received unknown message type:", msg.Type)
@@ -226,7 +252,7 @@ func (network *Network) SendPingMessage(sender *Contact, receiver *Contact) erro
 }
 
 func (network *Network) SendFindContactMessage(sender, receiver, target *Contact) ([]Contact, error) {
-	fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
+	//fmt.Println("\t\tNode getting the request to find more nodes", receiver.Address+":"+strconv.Itoa(receiver.Port))
 
 	message := CreateKademliaMessage(
 		"FIND_NODE",
@@ -312,7 +338,7 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, storageData 
 		return "", err
 	}
 
-	fmt.Println("\t\t\t msg", msg)
+	//fmt.Println("\t\t\t msg", msg)
 
 	switch msg.Type {
 	case "STORE_SUCCESSFUL":
@@ -325,10 +351,10 @@ func (network *Network) SendStoreMessage(sender, receiver *Contact, storageData 
 	}
 }
 
-func (network *Network) SendForgetMessage(sender, receiver *Contact, storageData *StorageData) (string, bool, error) {
-	// TODO
+func (network *Network) SendRefreshMessage(sender, receiver *Contact, storageData *StorageData) {
+
 	message := CreateKademliaMessage(
-		"FORGET",
+		"REFRESH",
 		sender,
 		receiver,
 		nil,
@@ -337,26 +363,9 @@ func (network *Network) SendForgetMessage(sender, receiver *Contact, storageData
 	)
 
 	addr := receiver.Address + ":" + strconv.Itoa(receiver.Port)
-	data, err := network.Send(addr, message)
-	if err != nil {
-		log.Printf("FORGET FAILED: %v\n", err)
-		return "", false, err
-	}
-	var msg KademliaMessage
-	if err := json.Unmarshal(data, &msg); err != nil {
-		fmt.Println("\t\t\t Error decoding message during forget command:", err)
-		return "", false, err
-	}
+	fmt.Printf(" %-10s  %-10s  %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s \n", "This node: ", message.Sender.Address, " is sending a message to: ", message.Receiver.Address, " Of the type: ", message.Type, " Data to be stored: Key: ", storageData.Key, " value: ", storageData.Value, " ttl: ", storageData.TimeToLive)
+	network.Send(addr, message)
 
-	switch msg.Type {
-	case "FORGET_SUCCESSFUL":
-		return msg.Sender.Address + " FORGET_SUCCESSFUL", true, nil
-	case "FORGET_FAILED":
-		return msg.Sender.Address + " FORGET_SUCCESSFUL", false, err
-	default:
-		fmt.Println("\t\t\t FORGET VALUE GOT A MESSAGE IT DID NOT EXPECT!!!!!!!!!!", msg.Type)
-		return "", false, nil
-	}
 }
 
 func (network *Network) Send(addr string, msg KademliaMessage) ([]byte, error) {

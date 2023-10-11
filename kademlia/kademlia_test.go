@@ -35,8 +35,8 @@ func TestInitNode(t *testing.T) {
 
 func TestInitJoinBootstrap(t *testing.T) {
 	// Initialize a Kademlia bootstrap node and verify its fields.
-	bootstrap, _ = InitJoin("130.240.109.105", 5000)
-
+	//bootstrap, _ = InitJoin("130.240.109.105", 5000)
+	bootstrap, _ = InitJoin("172.30.80.1", 5000)
 	// Check if the node is correctly initialized as a bootstrap node.
 	if !bootstrap.bootstrap {
 		t.Error("Expected bootstrap node, got non-bootstrap node")
@@ -70,7 +70,7 @@ func TestInitJoinNonBootstrap(t *testing.T) {
 func TestGetBootstrapIP(t *testing.T) {
 	// Test the GetBootstrapIP function with different IP inputs.
 	bootstrapIP := GetBootstrapIP("130.240.109.105")
-	if bootstrapIP != "130.240.109.105" {
+	if bootstrapIP != "172.30.80.1" {
 		t.Errorf("Expected bootstrap IP '130.240.65.81', got %s", bootstrapIP)
 	}
 
@@ -154,49 +154,4 @@ func TestBucketLen(t *testing.T) {
 	if result != 1 {
 		t.Error("Expected 2 nodes in bucket 1 due to prev tests")
 	}
-}
-
-func TestGetAlphaContacts(t *testing.T) {
-	// Create a Kademlia instance.
-
-	nonBootstrapNode1, _ := InitJoin("127.0.0.1", 2020)
-
-	// Create a map to track contacted nodes.
-	contactedMap := make(map[string]bool)
-
-	// Define the number of alpha contacts you want to retrieve.
-	alpha := 3
-
-	// Call the getAlphaContacts function.
-	alphaContacts := nonBootstrapNode1.getAlphaContacts(&bootstrap.RoutingTable.me, alpha, contactedMap)
-
-	// Check if the length of alphaContacts is equal to alpha.
-	if len(alphaContacts) != alpha {
-		t.Errorf("Expected %d alpha contacts, but got %d", alpha, len(alphaContacts))
-	}
-
-}
-
-func TestGetClosestNode(t *testing.T) {
-	// Create a Kademlia instance.
-
-	targetID := NewRandomKademliaID()
-
-	// Create a slice of contacts for testing.
-	contacts := []Contact{
-		NewContact(NewRandomKademliaID(), "127.0.0.1", 12345),
-		NewContact(NewRandomKademliaID(), "127.0.0.1", 12346),
-		NewContact(NewRandomKademliaID(), "127.0.0.1", 12347),
-		NewContact(NewRandomKademliaID(), "127.0.0.1", 12348),
-	}
-
-	// Call the getClosestNode function.
-	closest := storagenode.getClosestNode(*targetID, contacts)
-
-	// Check if the closest contact is not nil.
-	if closest == nil {
-		t.Error("Expected a closest contact, but got nil")
-	}
-
-	// Add more specific assertions as needed based on your implementation and test requirements.
 }

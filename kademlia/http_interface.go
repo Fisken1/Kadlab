@@ -23,13 +23,14 @@ func InitHTTPInterface(kad *Kademlia, rT *RoutingTable) {
 
 	http.HandleFunc("/objects/", handleReq)
 	http.ListenAndServe(":5000", nil)
+
 }
 
 func handleReq(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		println("req.Uri: ", req.RequestURI)
+		//println("req.Uri: ", req.RequestURI)
 		s := strings.Split(req.RequestURI, "/objects/")
-		println("hash: ", s[1])
+		//println("hash: ", s[1])
 		b := []byte(s[1])
 		hash, location := httpInterF.kademlia.Store(b)
 		fmt.Println("hash from Store: ", hash, " at location: ", location)

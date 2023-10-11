@@ -26,7 +26,7 @@ func Cli(config CLIConfig) {
 			input := strings.Fields(text)
 			answer := CliHandler(input, config.Kad)
 			config.Output.Write([]byte(answer))
-			fmt.Fprint(config.Output, answer+"KADEMLIA> ")
+			fmt.Fprint(config.Output, "KADEMLIA> ")
 		} else {
 			fmt.Fprint(config.Output, "KADEMLIA> ")
 		}
@@ -41,21 +41,21 @@ func CliHandler(input []string, node *Kademlia) string {
 		var ToReturn []string
 		uploaded := node.storagehandler.getUploadedData()
 		for _, data := range uploaded {
-			fmt.Println("Uploaded:", data)
+			//fmt.Println("Uploaded:", data)
 			ToReturn = append(ToReturn, data)
 		}
 		answer = strings.Join(ToReturn, ", ")
 
 	case "getContact":
 		var contactsToReturn []string
-		fmt.Println("getcontact")
-		fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
+		//fmt.Println("getcontact")
+		//fmt.Println("BUCKETS: ", node.RoutingTable.buckets)
 
 		for i, a := range node.RoutingTable.buckets {
 			if a.list != nil { // Check if the list is not nil
 				for e := a.list.Front(); e != nil; e = e.Next() {
 					if e.Value != nil {
-						fmt.Println("value in bucket", a, "is", e.Value)
+						//fmt.Println("value in bucket", a, "is", e.Value)
 						contactStr := e.Value.(Contact).ID.String()
 						contactsToReturn = append(contactsToReturn, contactStr)
 					}
@@ -81,7 +81,7 @@ func CliHandler(input []string, node *Kademlia) string {
 
 		if hash != "0" {
 			answer = hash + "\n"
-			fmt.Println("Stored")
+			//fmt.Println("Stored")
 		} else {
 			answer = "Error..." + "\n"
 		}
@@ -124,13 +124,13 @@ func CliHandler(input []string, node *Kademlia) string {
 
 	case "printID": //debug
 		answer = node.RoutingTable.me.ID.String()
-		fmt.Println(node.RoutingTable.me.ID.String())
+		//fmt.Println(node.RoutingTable.me.ID.String())
 
 	case "exit", "q":
 		Terminate()
 
 	default:
-		fmt.Println("something in default")
+		//fmt.Println("something in default")
 		return "Operation: >>" + input[0] + "<< not found." + "\n" + Usage()
 	}
 	return answer
