@@ -106,7 +106,7 @@ func GetBootstrapIP(ip string) string {
 	//return bootstrapIP
 
 	//bootstrapIPForTests := "130.240.109.105" // some arbitrary IP address hard coded to be bootstrap
-	bootstrapIPForTests := "172.30.80.1" // some arbitrary IP address hard coded to be bootstrap
+	bootstrapIPForTests := "172.30.80.1" //CHANGE FOR TESTING
 	return bootstrapIPForTests
 }
 
